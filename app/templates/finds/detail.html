@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}{{ find.title }} — Emne{% endblock %}
+
+{% block content %}
+<div class="find-detail">
+    <div class="find-header">
+        <h1>{{ find.title }}</h1>
+        <span class="category-badge category-{{ find.category }}">{{ find.category }}</span>
+        <div class="find-actions">
+            <a href="/finds/{{ find.id }}/edit" class="btn btn-sm">Edit</a>
+            <form method="post" action="/finds/{{ find.id }}/delete" style="display:inline"
+                  onsubmit="return confirm('Delete this find and all its photos?')">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    {% if find.description %}
+    <p class="find-description">{{ find.description }}</p>
+    {% endif %}
+
+    <div class="find-meta">
+        <span>📍 {{ "%.5f"|format(lat) }}, {{ "%.5f"|format(lon) }}</span>
+        <span>📅 {{ find.created_at.strftime('%d %b %Y') }}</span>
+        <a href="#" id="norgeskart-link" target="_blank" class="btn btn-sm" title="Open in Norgeskart">🗺️ Norgeskart</a>
+    </div>
+
+    <!-- Mini map -->
+    <div id="detail-map" class="detail-map"></div>
+
+    <!-- Photos -->
+    <section class="find-photos">
+        <div class="section-header">
+            <h2>Photos</h2>
+        </div>
+        {% if photo_urls %}
+        <div class="photo-grid">
+            {% for photo, full_url, thumb_url in photo_urls %}
+            <div class="photo-item">
+                <a href="{{ full_url }}" target="_blank">
+                    <img src="{{ thumb_url }}" alt="{{ photo.caption or find.title }}" loading="lazy">
+                </a>
+                <form method="post" action="/photos/{{ photo.id }}/caption" class="caption-form">
+                    <input type="text" name="caption" value="{{ photo.caption or '' }}" placeholder="Add caption…" class="caption-input">
+                    <button type="submit" class="btn btn-xs" title="Save caption">💾</button>
+                </form>
+                <form method="post" action="/photos/{{ photo.id }}/delete" class="photo-delete">
+                    <button type="submit" title="Delete photo" onclick="return confirm('Delete this photo?')">✕</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-hint">No photos yet. Add some via a visit or by editing the find.</p>
+        {% endif %}
+    </section>
+
+    <!-- Visits -->
+    <section class="find-visits">
+        <div class="section-header">
+            <h2>Observation History</h2>
+            <a href="/finds/{{ find.id }}/visits/new" class="btn btn-sm">+ Add Visit</a>
+        </div>
+
+        <div class="visit-timeline">
+            {% for visit in find.visits %}
+            <div class="visit-entry">
+                <div class="visit-date">
+                    {{ visit.visited_at.strftime('%d %b %Y') }}
+                    <span class="visit-actions">
+                        <a href="/finds/{{ find.id }}/visits/{{ visit.id }}/edit" class="btn btn-xs" title="Edit visit">✏️</a>
+                        <form method="post" action="/finds/{{ find.id }}/visits/{{ visit.id }}/delete" style="display:inline"
+                              onsubmit="return confirm('Delete this visit?')">
+                            <button type="submit" class="btn btn-xs btn-danger" title="Delete visit">🗑️</button>
+                        </form>
+                    </span>
+                </div>
+                {% if visit.notes %}
+                <p class="visit-notes">{{ visit.notes }}</p>
+                {% endif %}
+                {% if visit.photos %}
+                <div class="visit-photos">
+                    {% for photo in visit.photos %}
+                    <figure class="visit-figure">
+                        <a href="{{ get_photo_url(photo.storage_key) }}" target="_blank">
+                            <img src="{{ get_photo_url(photo.thumbnail_key) }}" alt="{{ photo.caption or '' }}" loading="lazy" class="visit-thumb">
+                        </a>
+                        {% if photo.caption %}<figcaption class="visit-caption">{{ photo.caption }}</figcaption>{% endif %}
+                    </figure>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <!-- Initial observation -->
+            <div class="visit-entry visit-entry--initial">
+                <div class="visit-date">{{ find.created_at.strftime('%d %b %Y') }} <span class="visit-label">— First observed</span></div>
+                {% if find.description %}
+                <p class="visit-notes">{{ find.description }}</p>
+                {% endif %}
+                {% if initial_photo_urls %}
+                <div class="visit-photos">
+                    {% for photo, full_url, thumb_url in initial_photo_urls %}
+                    <figure class="visit-figure">
+                        <a href="{{ full_url }}" target="_blank">
+                            <img src="{{ thumb_url }}" alt="{{ photo.caption or '' }}" loading="lazy" class="visit-thumb">
+                        </a>
+                        {% if photo.caption %}<figcaption class="visit-caption">{{ photo.caption }}</figcaption>{% endif %}
+                    </figure>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
+<script>
+    const lat = {{ lat }};
+    const lon = {{ lon }};
+
+    // Convert WGS84 to UTM33 (EPSG:25833) for Norgeskart
+    proj4.defs('EPSG:25833', '+proj=utm +zone=33 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+    const utm = proj4('EPSG:4326', 'EPSG:25833', [lon, lat]);
+    const norgeskartUrl = `https://norgeskart.no/?lon=${utm[0]}&lat=${utm[1]}&rotation=0&zoom=13&backgroundLayer=topo&markerLon=${utm[0]}&markerLat=${utm[1]}`;
+    document.getElementById('norgeskart-link').href = norgeskartUrl;
+
+    const detailMap = L.map('detail-map', {
+        zoomControl: true,
+    }).setView([lat, lon], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OSM',
+    }).addTo(detailMap);
+    L.marker([lat, lon]).addTo(detailMap);
+</script>
+{% endblock %}

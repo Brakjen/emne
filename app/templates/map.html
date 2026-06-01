@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Map — Emne{% endblock %}
+
+{% block content %}
+<div id="map" class="map-fullscreen"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const map = L.map('map').setView([62.0, 10.0], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+    }).addTo(map);
+
+    const markers = L.markerClusterGroup();
+
+    fetch('/api/finds/geojson')
+        .then(r => r.json())
+        .then(data => {
+            L.geoJSON(data, {
+                pointToLayer: (feature, latlng) => L.marker(latlng),
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    let popup = `<strong><a href="/finds/${p.id}">${p.title}</a></strong><br>`;
+                    popup += `<span class="category-badge">${p.category}</span>`;
+                    if (p.thumbnail_url) {
+                        popup += `<br><img src="${p.thumbnail_url}" style="max-width:150px;margin-top:4px;border-radius:4px;">`;
+                    }
+                    layer.bindPopup(popup);
+                }
+            }).addTo(markers);
+            map.addLayer(markers);
+            if (data.features.length > 0) {
+                map.fitBounds(markers.getBounds(), {padding: [20, 20]});
+            }
+        });
+
+    // "Record here" button
+    const recordBtn = L.control({position: 'bottomright'});
+    recordBtn.onAdd = function() {
+        const div = L.DomUtil.create('div', 'leaflet-bar');
+        div.innerHTML = '<a href="#" id="record-here-btn" title="Record find at current location" style="font-size:18px;padding:6px 10px;display:block;background:#fff;">📍 Record Here</a>';
+        return div;
+    };
+    recordBtn.addTo(map);
+
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'record-here-btn' || e.target.closest('#record-here-btn')) {
+            e.preventDefault();
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        window.location.href = `/finds/new?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`;
+                    },
+                    () => {
+                        const center = map.getCenter();
+                        window.location.href = `/finds/new?lat=${center.lat}&lon=${center.lng}`;
+                    },
+                    {enableHighAccuracy: true}
+                );
+            }
+        }
+    });
+</script>
+{% endblock %}

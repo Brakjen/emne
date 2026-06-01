@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{% if find %}Edit {{ find.title }}{% else %}New Find{% endif %} — Emne{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <h1>{% if find %}Edit Find{% else %}New Find{% endif %}</h1>
+
+    <form method="post"
+          action="{% if find %}/finds/{{ find.id }}/edit{% else %}/finds{% endif %}"
+          enctype="multipart/form-data">
+
+        <div class="form-group">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required
+                   value="{{ find.title if find else '' }}"
+                   placeholder="e.g. Twisted Pine, Birch Burl, Mossy Rock">
+        </div>
+
+        <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category">
+                {% for cat in ['tree', 'sapling', 'burl', 'rock', 'mushroom', 'viewpoint', 'deadwood', 'other'] %}
+                <option value="{{ cat }}" {% if (find and find.category == cat) or (not find and cat == 'other') %}selected{% endif %}>
+                    {{ cat|capitalize }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3"
+                      placeholder="Notes about this find...">{{ find.description if find and find.description else '' }}</textarea>
+        </div>
+
+        <div class="form-group location-group">
+            <label>Location</label>
+            <div class="location-inputs">
+                <input type="number" step="any" id="latitude" name="latitude" required
+                       placeholder="Latitude" value="{{ lat if lat else '' }}">
+                <input type="number" step="any" id="longitude" name="longitude" required
+                       placeholder="Longitude" value="{{ lon if lon else '' }}">
+                <input type="hidden" id="accuracy" name="accuracy" value="">
+            </div>
+            <button type="button" id="get-location-btn" class="btn btn-sm">📍 Get Current Location</button>
+            <div id="location-status" class="location-status"></div>
+        </div>
+
+        <div id="form-map" class="form-map"></div>
+
+        {% if not find %}
+        <div class="form-group">
+            <label for="photos">Photos</label>
+            <input type="file" id="photos" name="photos" accept="image/*" multiple>
+        </div>
+        {% else %}
+        <div class="form-group">
+            <label for="photos">Add Photos</label>
+            <input type="file" id="photos" name="photos" accept="image/*" multiple>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{% if find %}Save Changes{% else %}Create Find{% endif %}</button>
+            <a href="{% if find %}/finds/{{ find.id }}{% else %}/finds{% endif %}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const lat = parseFloat(document.getElementById('latitude').value) || 62.0;
+    const lon = parseFloat(document.getElementById('longitude').value) || 10.0;
+    const hasCoords = document.getElementById('latitude').value !== '';
+    const zoom = hasCoords ? 15 : 5;
+
+    const formMap = L.map('form-map').setView([lat, lon], zoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OSM',
+    }).addTo(formMap);
+
+    let marker = hasCoords ? L.marker([lat, lon]).addTo(formMap) : null;
+
+    formMap.on('click', function(e) {
+        const {lat, lng} = e.latlng;
+        document.getElementById('latitude').value = lat.toFixed(6);
+        document.getElementById('longitude').value = lng.toFixed(6);
+        if (marker) {
+            marker.setLatLng(e.latlng);
+        } else {
+            marker = L.marker(e.latlng).addTo(formMap);
+        }
+    });
+
+    document.getElementById('get-location-btn').addEventListener('click', function() {
+        const status = document.getElementById('location-status');
+        if (!navigator.geolocation) {
+            status.textContent = 'Geolocation not supported';
+            return;
+        }
+        status.textContent = 'Getting location...';
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                const {latitude, longitude, accuracy} = pos.coords;
+                document.getElementById('latitude').value = latitude.toFixed(6);
+                document.getElementById('longitude').value = longitude.toFixed(6);
+                document.getElementById('accuracy').value = accuracy.toFixed(1);
+                formMap.setView([latitude, longitude], 16);
+                if (marker) {
+                    marker.setLatLng([latitude, longitude]);
+                } else {
+                    marker = L.marker([latitude, longitude]).addTo(formMap);
+                }
+                status.textContent = `Accuracy: ${accuracy.toFixed(0)}m`;
+            },
+            err => {
+                if (err.code === 1) {
+                    status.innerHTML = 'Location denied. <br><small>Safari: tap <b>Aa</b> in address bar → Website Settings → Location → Allow. Then tap the button again.</small>';
+                } else {
+                    status.textContent = `Error: ${err.message}`;
+                }
+            },
+            {enableHighAccuracy: true, timeout: 15000}
+        );
+    });
+
+    // Auto-get location if no coords provided
+    if (!hasCoords && navigator.geolocation) {
+        document.getElementById('get-location-btn').click();
+    }
+</script>
+{% endblock %}

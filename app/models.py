@@ -1,0 +1,82 @@
+import uuid
+from datetime import datetime, timezone
+
+from geoalchemy2 import Geometry
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, Text, Uuid
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Find(Base):
+    __tablename__ = "finds"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str] = mapped_column(
+        Enum(
+            "tree", "sapling", "burl", "rock", "mushroom",
+            "viewpoint", "deadwood", "other",
+            name="find_category",
+        ),
+        default="other",
+    )
+    location: Mapped[object] = mapped_column(
+        Geometry(geometry_type="POINT", srid=4326),
+    )
+    location_accuracy: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    visits: Mapped[list["Visit"]] = relationship(
+        back_populates="find", cascade="all, delete-orphan", order_by="Visit.visited_at.desc()"
+    )
+    photos: Mapped[list["Photo"]] = relationship(
+        back_populates="find", cascade="all, delete-orphan", order_by="Photo.created_at.desc()"
+    )
+
+
+class Visit(Base):
+    __tablename__ = "visits"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    find_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("finds.id", ondelete="CASCADE"))
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    visited_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    find: Mapped["Find"] = relationship(back_populates="visits")
+    photos: Mapped[list["Photo"]] = relationship(
+        back_populates="visit", order_by="Photo.created_at.desc()"
+    )
+
+
+class Photo(Base):
+    __tablename__ = "photos"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    find_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("finds.id", ondelete="CASCADE"))
+    visit_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("visits.id", ondelete="SET NULL"), nullable=True
+    )
+    storage_key: Mapped[str] = mapped_column(String(512))
+    thumbnail_key: Mapped[str] = mapped_column(String(512))
+    caption: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    taken_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    find: Mapped["Find"] = relationship(back_populates="photos")
+    visit: Mapped["Visit | None"] = relationship(back_populates="photos")

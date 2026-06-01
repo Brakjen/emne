@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Finds — Emne{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Finds</h1>
+    <a href="/finds/new" class="btn btn-primary">+ New Find</a>
+</div>
+
+<div class="filter-bar">
+    <a href="/finds" class="filter-chip {% if not current_category %}active{% endif %}">All</a>
+    {% for cat in ['tree', 'sapling', 'burl', 'rock', 'mushroom', 'viewpoint', 'deadwood', 'other'] %}
+    <a href="/finds?category={{ cat }}" class="filter-chip {% if current_category == cat %}active{% endif %}">{{ cat|capitalize }}</a>
+    {% endfor %}
+</div>
+
+{% if finds_data %}
+<div class="finds-grid">
+    {% for item in finds_data %}
+    <a href="/finds/{{ item.find.id }}" class="find-card">
+        <div class="find-card-image">
+            {% if item.thumbnail_url %}
+            <img src="{{ item.thumbnail_url }}" alt="{{ item.find.title }}" loading="lazy">
+            {% else %}
+            <div class="find-card-placeholder">📍</div>
+            {% endif %}
+        </div>
+        <div class="find-card-body">
+            <h3>{{ item.find.title }}</h3>
+            <span class="category-badge">{{ item.find.category }}</span>
+            <time>{{ item.find.created_at.strftime('%d %b %Y') }}</time>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No finds yet. Go outside and discover something!</p>
+    <a href="/finds/new" class="btn btn-primary">Record Your First Find</a>
+</div>
+{% endif %}
+{% endblock %}

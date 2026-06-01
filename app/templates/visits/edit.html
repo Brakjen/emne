@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Edit Visit — {{ find.title }} — Emne{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <h1>Edit Visit for "{{ find.title }}"</h1>
+
+    {% if photo_urls %}
+    <div class="form-group">
+        <label>Existing Photos</label>
+        <div class="visit-photos" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+            {% for photo, thumb_url in photo_urls %}
+            <div style="position:relative;">
+                <img src="{{ thumb_url }}" alt="" class="visit-thumb">
+                <form method="post" action="/photos/{{ photo.id }}/delete">
+                    <input type="hidden" name="next" value="/finds/{{ find.id }}/visits/{{ visit.id }}/edit">
+                    <button type="submit" title="Delete photo" class="photo-delete-btn" onclick="return confirm('Delete this photo?')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;">✕</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/finds/{{ find.id }}/visits/{{ visit.id }}/edit" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="visited_at">Date of Visit</label>
+            <input type="date" id="visited_at" name="visited_at" value="{{ visit.visited_at.strftime('%Y-%m-%d') }}">
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="4"
+                      placeholder="What did you observe? How has it changed?">{{ visit.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="photos">Add Photos</label>
+            <input type="file" id="photos" name="photos" accept="image/*" multiple>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/finds/{{ find.id }}" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
