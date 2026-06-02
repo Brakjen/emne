@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
 from geoalchemy2.shape import to_shape
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +11,8 @@ from app.models import Find
 from app.services.photo import get_photo_url
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
-templates = Jinja2Templates(directory="app/templates")
+
+from app.templating import templates
 
 
 @router.get("/map", response_class=HTMLResponse)

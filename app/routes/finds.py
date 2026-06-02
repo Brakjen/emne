@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import Point
 from sqlalchemy import select
@@ -21,7 +20,8 @@ from app.services.photo import (
 )
 
 router = APIRouter(prefix="/finds", dependencies=[Depends(get_current_user)])
-templates = Jinja2Templates(directory="app/templates")
+
+from app.templating import templates
 
 
 @router.get("", response_class=HTMLResponse)

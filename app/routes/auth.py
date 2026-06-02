@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 
 from app.auth import (
     login_user,
@@ -10,7 +9,8 @@ from app.auth import (
 from app.config import settings
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
+
+from app.templating import templates
 
 
 @router.get("/login", response_class=HTMLResponse)

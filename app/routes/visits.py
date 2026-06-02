@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -14,7 +13,8 @@ from app.models import Find, Photo, Visit
 from app.services.photo import delete_photo_files, delete_photo_files_bulk, extract_exif_datetime, get_photo_url, upload_photo
 
 router = APIRouter(prefix="/finds/{find_id}/visits", dependencies=[Depends(get_current_user)])
-templates = Jinja2Templates(directory="app/templates")
+
+from app.templating import templates
 
 
 @router.get("/new", response_class=HTMLResponse)

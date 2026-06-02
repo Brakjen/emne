@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir .
 
 COPY . .
 
+ARG COMMIT_SHA=unknown
+RUN echo "$COMMIT_SHA" > /app/VERSION
+
 ENV PYTHONPATH=/app
 
 EXPOSE 8000
