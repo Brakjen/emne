@@ -42,8 +42,12 @@
                        placeholder="Longitude" value="{{ lon if lon else '' }}">
                 <input type="hidden" id="accuracy" name="accuracy" value="">
             </div>
-            <button type="button" id="get-location-btn" class="btn btn-sm">📍 Get Current Location</button>
-            <div id="location-status" class="location-status"></div>
+            <div class="sampling-controls">
+                <button type="button" id="start-sampling-btn" class="btn btn-sm">📍 Lock Location</button>
+                <button type="button" id="stop-sampling-btn" class="btn btn-sm" style="display:none">✓ Done</button>
+                <button type="button" id="cancel-sampling-btn" class="btn btn-sm" style="display:none">✕ Cancel</button>
+            </div>
+            <div id="sampling-status" class="location-status"></div>
         </div>
 
         <div id="form-map" class="form-map"></div>
@@ -70,9 +74,14 @@
 
 {% block scripts %}
 <script>
-    const lat = parseFloat(document.getElementById('latitude').value) || 62.0;
-    const lon = parseFloat(document.getElementById('longitude').value) || 10.0;
-    const hasCoords = document.getElementById('latitude').value !== '';
+    const latInput = document.getElementById('latitude');
+    const lonInput = document.getElementById('longitude');
+    const accInput = document.getElementById('accuracy');
+    const statusEl = document.getElementById('sampling-status');
+
+    const lat = parseFloat(latInput.value) || 62.0;
+    const lon = parseFloat(lonInput.value) || 10.0;
+    const hasCoords = latInput.value !== '';
     const zoom = hasCoords ? 15 : 5;
 
     const formMap = L.map('form-map').setView([lat, lon], zoom);
@@ -81,11 +90,13 @@
     }).addTo(formMap);
 
     let marker = hasCoords ? L.marker([lat, lon]).addTo(formMap) : null;
+    let sampleDots = [];
 
     formMap.on('click', function(e) {
         const {lat, lng} = e.latlng;
-        document.getElementById('latitude').value = lat.toFixed(6);
-        document.getElementById('longitude').value = lng.toFixed(6);
+        latInput.value = lat.toFixed(6);
+        lonInput.value = lng.toFixed(6);
+        accInput.value = '';
         if (marker) {
             marker.setLatLng(e.latlng);
         } else {
@@ -93,41 +104,155 @@
         }
     });
 
-    document.getElementById('get-location-btn').addEventListener('click', function() {
-        const status = document.getElementById('location-status');
-        if (!navigator.geolocation) {
-            status.textContent = 'Geolocation not supported';
+    // --- GPS Multi-Sampling ---
+    const TARGET_ACCURACY = 5; // meters
+    const TIMEOUT = 30000; // 30 seconds
+    let samples = [];
+    let watchId = null;
+    let samplingTimer = null;
+
+    function median(arr) {
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function filterOutliers(samples) {
+        if (samples.length < 3) return samples;
+        const accuracies = samples.map(s => s.accuracy);
+        const med = median(accuracies);
+        return samples.filter(s => s.accuracy <= med * 2);
+    }
+
+    function computeAverage(samples) {
+        const filtered = filterOutliers(samples);
+        if (filtered.length === 0) return null;
+        const avgLat = filtered.reduce((s, r) => s + r.lat, 0) / filtered.length;
+        const avgLng = filtered.reduce((s, r) => s + r.lng, 0) / filtered.length;
+        // Effective accuracy: average of individual accuracies divided by sqrt(n)
+        const avgAcc = filtered.reduce((s, r) => s + r.accuracy, 0) / filtered.length;
+        const effectiveAcc = avgAcc / Math.sqrt(filtered.length);
+        return {lat: avgLat, lng: avgLng, accuracy: effectiveAcc, count: filtered.length};
+    }
+
+    function clearSampleDots() {
+        sampleDots.forEach(d => formMap.removeLayer(d));
+        sampleDots = [];
+    }
+
+    function updateSamplingUI() {
+        const avg = computeAverage(samples);
+        if (!avg) return;
+
+        statusEl.innerHTML = `Sampling... <strong>${samples.length}</strong> readings — ±${avg.accuracy.toFixed(1)}m`;
+
+        // Update marker to averaged position
+        if (marker) {
+            marker.setLatLng([avg.lat, avg.lng]);
+        } else {
+            marker = L.marker([avg.lat, avg.lng]).addTo(formMap);
+        }
+
+        // Auto-stop if accuracy target reached
+        if (avg.accuracy <= TARGET_ACCURACY && samples.length >= 3) {
+            finishSampling();
+        }
+    }
+
+    function finishSampling() {
+        stopWatching();
+        const avg = computeAverage(samples);
+        if (!avg) {
+            statusEl.textContent = 'No valid readings obtained';
             return;
         }
-        status.textContent = 'Getting location...';
-        navigator.geolocation.getCurrentPosition(
+        latInput.value = avg.lat.toFixed(6);
+        lonInput.value = avg.lng.toFixed(6);
+        accInput.value = avg.accuracy.toFixed(1);
+        formMap.setView([avg.lat, avg.lng], 17);
+        if (marker) marker.setLatLng([avg.lat, avg.lng]);
+        statusEl.innerHTML = `Location locked: <strong>±${avg.accuracy.toFixed(1)}m</strong> (${avg.count} readings)`;
+        showButtons('start');
+    }
+
+    function stopWatching() {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+        if (samplingTimer) {
+            clearTimeout(samplingTimer);
+            samplingTimer = null;
+        }
+    }
+
+    function showButtons(mode) {
+        document.getElementById('start-sampling-btn').style.display = mode === 'start' ? '' : 'none';
+        document.getElementById('stop-sampling-btn').style.display = mode === 'sampling' ? '' : 'none';
+        document.getElementById('cancel-sampling-btn').style.display = mode === 'sampling' ? '' : 'none';
+    }
+
+    function startSampling() {
+        if (!navigator.geolocation) {
+            statusEl.textContent = 'Geolocation not supported';
+            return;
+        }
+        samples = [];
+        clearSampleDots();
+        showButtons('sampling');
+        statusEl.textContent = 'Sampling... waiting for GPS...';
+
+        watchId = navigator.geolocation.watchPosition(
             pos => {
                 const {latitude, longitude, accuracy} = pos.coords;
-                document.getElementById('latitude').value = latitude.toFixed(6);
-                document.getElementById('longitude').value = longitude.toFixed(6);
-                document.getElementById('accuracy').value = accuracy.toFixed(1);
-                formMap.setView([latitude, longitude], 16);
-                if (marker) {
-                    marker.setLatLng([latitude, longitude]);
-                } else {
-                    marker = L.marker([latitude, longitude]).addTo(formMap);
+                samples.push({lat: latitude, lng: longitude, accuracy});
+
+                // Draw sample dot on map
+                const dot = L.circleMarker([latitude, longitude], {
+                    radius: 4, color: '#999', weight: 1, fillColor: '#bbb', fillOpacity: 0.6
+                }).addTo(formMap);
+                sampleDots.push(dot);
+
+                if (samples.length === 1) {
+                    formMap.setView([latitude, longitude], 17);
                 }
-                status.textContent = `Accuracy: ${accuracy.toFixed(0)}m`;
+                updateSamplingUI();
             },
             err => {
                 if (err.code === 1) {
-                    status.innerHTML = 'Location denied. <br><small>Safari: tap <b>Aa</b> in address bar → Website Settings → Location → Allow. Then tap the button again.</small>';
-                } else {
-                    status.textContent = `Error: ${err.message}`;
+                    statusEl.innerHTML = 'Location denied. <br><small>Safari: tap <b>Aa</b> in address bar → Website Settings → Location → Allow.</small>';
+                    stopWatching();
+                    showButtons('start');
                 }
             },
-            {enableHighAccuracy: true, timeout: 15000}
+            {enableHighAccuracy: true, maximumAge: 0}
         );
+
+        // Safety timeout
+        samplingTimer = setTimeout(() => {
+            if (samples.length > 0) {
+                finishSampling();
+            } else {
+                stopWatching();
+                statusEl.textContent = 'Timed out — no GPS readings received';
+                showButtons('start');
+            }
+        }, TIMEOUT);
+    }
+
+    document.getElementById('start-sampling-btn').addEventListener('click', startSampling);
+    document.getElementById('stop-sampling-btn').addEventListener('click', finishSampling);
+    document.getElementById('cancel-sampling-btn').addEventListener('click', function() {
+        stopWatching();
+        clearSampleDots();
+        samples = [];
+        statusEl.textContent = 'Cancelled';
+        showButtons('start');
     });
 
-    // Auto-get location if no coords provided
+    // Auto-start sampling if no coords provided
     if (!hasCoords && navigator.geolocation) {
-        document.getElementById('get-location-btn').click();
+        startSampling();
     }
 </script>
 {% endblock %}

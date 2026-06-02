@@ -132,6 +132,21 @@ body {
     margin-top: 0.35rem;
 }
 
+.sampling-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.refine-panel {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+}
+
 /* Login */
 .login-container {
     max-width: 360px;

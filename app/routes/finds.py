@@ -122,6 +122,24 @@ async def update_status(
     return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
 
 
+@router.post("/{find_id}/refine-location")
+async def refine_location(
+    find_id: uuid.UUID,
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    accuracy: float | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Find).where(Find.id == find_id))
+    find = result.scalar_one_or_none()
+    if not find:
+        return HTMLResponse("Not found", status_code=404)
+    find.location = from_shape(Point(longitude, latitude), srid=4326)
+    find.location_accuracy = accuracy
+    await db.commit()
+    return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
+
+
 @router.get("/{find_id}", response_class=HTMLResponse)
 async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     stmt = (

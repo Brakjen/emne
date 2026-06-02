@@ -27,9 +27,25 @@
     {% endif %}
 
     <div class="find-meta">
-        <span>📍 {{ "%.5f"|format(lat) }}, {{ "%.5f"|format(lon) }}</span>
+        <span>📍 {{ "%.5f"|format(lat) }}, {{ "%.5f"|format(lon) }}{% if find.location_accuracy %} (±{{ "%.0f"|format(find.location_accuracy) }}m){% endif %}</span>
         <span>📅 {{ find.created_at.strftime('%d %b %Y') }}</span>
         <a href="#" id="norgeskart-link" target="_blank" class="btn btn-sm" title="Open in Norgeskart">🗺️ Norgeskart</a>
+        <button type="button" id="refine-location-btn" class="btn btn-sm">📍 Refine Location</button>
+    </div>
+
+    <!-- Refine location panel (hidden by default) -->
+    <div id="refine-panel" class="refine-panel" style="display:none">
+        <div id="refine-map" class="form-map"></div>
+        <div id="refine-status" class="location-status"></div>
+        <div class="sampling-controls">
+            <button type="button" id="refine-done-btn" class="btn btn-sm btn-primary" style="display:none">✓ Save Location</button>
+            <button type="button" id="refine-cancel-btn" class="btn btn-sm">✕ Cancel</button>
+        </div>
+        <form id="refine-form" method="post" action="/finds/{{ find.id }}/refine-location" style="display:none">
+            <input type="hidden" name="latitude" id="refine-lat">
+            <input type="hidden" name="longitude" id="refine-lng">
+            <input type="hidden" name="accuracy" id="refine-acc">
+        </form>
     </div>
 
     <!-- Mini map -->
@@ -143,5 +159,106 @@
         attribution: '© OSM',
     }).addTo(detailMap);
     L.marker([lat, lon]).addTo(detailMap);
+
+    // --- Refine Location ---
+    const TARGET_ACCURACY = 5;
+    const TIMEOUT = 30000;
+    let refineMap = null;
+    let refineSamples = [];
+    let refineWatchId = null;
+    let refineTimer = null;
+    let refineMarker = null;
+    let refineDots = [];
+
+    function refineMedian(arr) {
+        const sorted = [...arr].sort((a, b) => a - b);
+        const mid = Math.floor(sorted.length / 2);
+        return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
+    function refineCompute() {
+        let filtered = refineSamples;
+        if (filtered.length >= 3) {
+            const med = refineMedian(filtered.map(s => s.accuracy));
+            filtered = filtered.filter(s => s.accuracy <= med * 2);
+        }
+        if (filtered.length === 0) return null;
+        const avgLat = filtered.reduce((s, r) => s + r.lat, 0) / filtered.length;
+        const avgLng = filtered.reduce((s, r) => s + r.lng, 0) / filtered.length;
+        const avgAcc = filtered.reduce((s, r) => s + r.accuracy, 0) / filtered.length;
+        return {lat: avgLat, lng: avgLng, accuracy: avgAcc / Math.sqrt(filtered.length), count: filtered.length};
+    }
+
+    function refineFinish() {
+        if (refineWatchId !== null) { navigator.geolocation.clearWatch(refineWatchId); refineWatchId = null; }
+        if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
+        const avg = refineCompute();
+        if (!avg) { document.getElementById('refine-status').textContent = 'No readings'; return; }
+        document.getElementById('refine-lat').value = avg.lat.toFixed(6);
+        document.getElementById('refine-lng').value = avg.lng.toFixed(6);
+        document.getElementById('refine-acc').value = avg.accuracy.toFixed(1);
+        document.getElementById('refine-status').innerHTML = `<strong>±${avg.accuracy.toFixed(1)}m</strong> (${avg.count} readings) — Ready to save`;
+        document.getElementById('refine-done-btn').style.display = '';
+    }
+
+    document.getElementById('refine-location-btn').addEventListener('click', function() {
+        const panel = document.getElementById('refine-panel');
+        panel.style.display = '';
+        refineSamples = [];
+        refineDots.forEach(d => refineMap && refineMap.removeLayer(d));
+        refineDots = [];
+
+        if (!refineMap) {
+            refineMap = L.map('refine-map').setView([lat, lon], 17);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution: '© OSM'}).addTo(refineMap);
+        } else {
+            refineMap.setView([lat, lon], 17);
+            if (refineMarker) { refineMap.removeLayer(refineMarker); refineMarker = null; }
+        }
+
+        document.getElementById('refine-done-btn').style.display = 'none';
+        document.getElementById('refine-status').textContent = 'Sampling... waiting for GPS...';
+
+        refineWatchId = navigator.geolocation.watchPosition(
+            pos => {
+                const {latitude, longitude, accuracy} = pos.coords;
+                refineSamples.push({lat: latitude, lng: longitude, accuracy});
+                const dot = L.circleMarker([latitude, longitude], {
+                    radius: 4, color: '#999', weight: 1, fillColor: '#bbb', fillOpacity: 0.6
+                }).addTo(refineMap);
+                refineDots.push(dot);
+                if (refineSamples.length === 1) refineMap.setView([latitude, longitude], 17);
+                const avg = refineCompute();
+                if (avg) {
+                    if (refineMarker) refineMarker.setLatLng([avg.lat, avg.lng]);
+                    else refineMarker = L.circleMarker([avg.lat, avg.lng], {
+                        radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
+                    }).addTo(refineMap);
+                    document.getElementById('refine-status').innerHTML = `Sampling... <strong>${refineSamples.length}</strong> readings — ±${avg.accuracy.toFixed(1)}m`;
+                    if (avg.accuracy <= TARGET_ACCURACY && refineSamples.length >= 3) refineFinish();
+                }
+            },
+            () => {},
+            {enableHighAccuracy: true, maximumAge: 0}
+        );
+
+        refineTimer = setTimeout(() => {
+            if (refineSamples.length > 0) refineFinish();
+            else {
+                if (refineWatchId !== null) { navigator.geolocation.clearWatch(refineWatchId); refineWatchId = null; }
+                document.getElementById('refine-status').textContent = 'Timed out — no GPS readings';
+            }
+        }, TIMEOUT);
+    });
+
+    document.getElementById('refine-done-btn').addEventListener('click', function() {
+        document.getElementById('refine-form').submit();
+    });
+
+    document.getElementById('refine-cancel-btn').addEventListener('click', function() {
+        if (refineWatchId !== null) { navigator.geolocation.clearWatch(refineWatchId); refineWatchId = null; }
+        if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
+        document.getElementById('refine-panel').style.display = 'none';
+    });
 </script>
 {% endblock %}
