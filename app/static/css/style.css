@@ -246,6 +246,28 @@ body {
     color: var(--color-primary);
 }
 
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-watching { background: #e3f2fd; color: #1565c0; }
+.status-collected { background: #e8f5e9; color: #2e7d32; }
+.status-passed { background: #f3e5f5; color: #6a1b9a; }
+
+.status-toggle select {
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    background: var(--color-surface);
+    cursor: pointer;
+}
+
 /* Find detail */
 .find-detail { max-width: 700px; }
 .find-header {

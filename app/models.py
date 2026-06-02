@@ -24,6 +24,11 @@ class Find(Base):
         ),
         default="other",
     )
+    status: Mapped[str] = mapped_column(
+        Enum("watching", "collected", "passed", name="find_status"),
+        default="watching",
+        server_default="watching",
+    )
     location: Mapped[object] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
     )

@@ -25,10 +25,12 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("", response_class=HTMLResponse)
-async def list_finds(request: Request, category: str | None = None, db: AsyncSession = Depends(get_db)):
+async def list_finds(request: Request, category: str | None = None, status: str | None = None, db: AsyncSession = Depends(get_db)):
     stmt = select(Find).options(selectinload(Find.photos)).order_by(Find.created_at.desc())
     if category:
         stmt = stmt.where(Find.category == category)
+    if status:
+        stmt = stmt.where(Find.status == status)
     result = await db.execute(stmt)
     finds = result.scalars().all()
 
@@ -49,6 +51,7 @@ async def list_finds(request: Request, category: str | None = None, db: AsyncSes
     return templates.TemplateResponse(request, "finds/list.html", {
         "finds_data": finds_data,
         "current_category": category,
+        "current_status": status,
     })
 
 
@@ -101,6 +104,22 @@ async def create_find(
 
     await db.commit()
     return RedirectResponse(url=f"/finds/{find.id}", status_code=303)
+
+
+@router.post("/{find_id}/status")
+async def update_status(
+    find_id: uuid.UUID,
+    status: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Find).where(Find.id == find_id))
+    find = result.scalar_one_or_none()
+    if not find:
+        return HTMLResponse("Not found", status_code=404)
+    if status in ("watching", "collected", "passed"):
+        find.status = status
+        await db.commit()
+    return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
 
 
 @router.get("/{find_id}", response_class=HTMLResponse)

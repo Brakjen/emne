@@ -8,9 +8,16 @@
 </div>
 
 <div class="filter-bar">
-    <a href="/finds" class="filter-chip {% if not current_category %}active{% endif %}">All</a>
+    <a href="/finds" class="filter-chip {% if not current_category and not current_status %}active{% endif %}">All</a>
     {% for cat in ['tree', 'sapling', 'burl', 'rock', 'mushroom', 'viewpoint', 'deadwood', 'other'] %}
-    <a href="/finds?category={{ cat }}" class="filter-chip {% if current_category == cat %}active{% endif %}">{{ cat|capitalize }}</a>
+    <a href="/finds?category={{ cat }}{% if current_status %}&status={{ current_status }}{% endif %}" class="filter-chip {% if current_category == cat %}active{% endif %}">{{ cat|capitalize }}</a>
+    {% endfor %}
+</div>
+
+<div class="filter-bar">
+    <a href="/finds{% if current_category %}?category={{ current_category }}{% endif %}" class="filter-chip {% if not current_status %}active{% endif %}">Any status</a>
+    {% for st in ['watching', 'collected', 'passed'] %}
+    <a href="/finds?status={{ st }}{% if current_category %}&category={{ current_category }}{% endif %}" class="filter-chip {% if current_status == st %}active{% endif %}">{{ st|capitalize }}</a>
     {% endfor %}
 </div>
 
@@ -28,6 +35,7 @@
         <div class="find-card-body">
             <h3>{{ item.find.title }}</h3>
             <span class="category-badge">{{ item.find.category }}</span>
+            <span class="status-badge status-{{ item.find.status }}">{{ item.find.status }}</span>
             <time>{{ item.find.created_at.strftime('%d %b %Y') }}</time>
         </div>
     </a>

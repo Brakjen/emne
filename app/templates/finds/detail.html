@@ -6,6 +6,13 @@
     <div class="find-header">
         <h1>{{ find.title }}</h1>
         <span class="category-badge category-{{ find.category }}">{{ find.category }}</span>
+        <form method="post" action="/finds/{{ find.id }}/status" class="status-toggle" id="status-form">
+            <select name="status" onchange="this.form.submit()">
+                {% for st in ['watching', 'collected', 'passed'] %}
+                <option value="{{ st }}" {% if find.status == st %}selected{% endif %}>{{ st|capitalize }}</option>
+                {% endfor %}
+            </select>
+        </form>
         <div class="find-actions">
             <a href="/finds/{{ find.id }}/edit" class="btn btn-sm">Edit</a>
             <form method="post" action="/finds/{{ find.id }}/delete" style="display:inline"
