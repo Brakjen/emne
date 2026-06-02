@@ -25,7 +25,7 @@ body {
     max-width: 960px;
     margin: 0 auto;
     padding: 1.5rem 1rem;
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
 }
 
 /* Bottom Navigation */
