@@ -190,7 +190,7 @@
     }
 
     function refineFinish() {
-        if (refineWatchId !== null) { navigator.geolocation.clearWatch(refineWatchId); refineWatchId = null; }
+        if (refineWatchId !== null) { clearInterval(refineWatchId); refineWatchId = null; }
         if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
         const avg = refineCompute();
         if (!avg) { document.getElementById('refine-status').textContent = 'No readings'; return; }
@@ -219,28 +219,32 @@
         document.getElementById('refine-done-btn').style.display = 'none';
         document.getElementById('refine-status').textContent = 'Sampling... waiting for GPS...';
 
-        refineWatchId = navigator.geolocation.watchPosition(
-            pos => {
-                const {latitude, longitude, accuracy} = pos.coords;
-                refineSamples.push({lat: latitude, lng: longitude, accuracy});
-                const dot = L.circleMarker([latitude, longitude], {
-                    radius: 4, color: '#999', weight: 1, fillColor: '#bbb', fillOpacity: 0.6
-                }).addTo(refineMap);
-                refineDots.push(dot);
-                if (refineSamples.length === 1) refineMap.setView([latitude, longitude], 17);
-                const avg = refineCompute();
-                if (avg) {
-                    if (refineMarker) refineMarker.setLatLng([avg.lat, avg.lng]);
-                    else refineMarker = L.circleMarker([avg.lat, avg.lng], {
-                        radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
+        function refinetakeSample() {
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    const {latitude, longitude, accuracy} = pos.coords;
+                    refineSamples.push({lat: latitude, lng: longitude, accuracy});
+                    const dot = L.circleMarker([latitude, longitude], {
+                        radius: 4, color: '#999', weight: 1, fillColor: '#bbb', fillOpacity: 0.6
                     }).addTo(refineMap);
-                    document.getElementById('refine-status').innerHTML = `Sampling... <strong>${refineSamples.length}</strong> readings — ±${avg.accuracy.toFixed(1)}m`;
-                    if (avg.accuracy <= TARGET_ACCURACY && refineSamples.length >= 3) refineFinish();
-                }
-            },
-            () => {},
-            {enableHighAccuracy: true, maximumAge: 2000, timeout: 10000}
-        );
+                    refineDots.push(dot);
+                    if (refineSamples.length === 1) refineMap.setView([latitude, longitude], 17);
+                    const avg = refineCompute();
+                    if (avg) {
+                        if (refineMarker) refineMarker.setLatLng([avg.lat, avg.lng]);
+                        else refineMarker = L.circleMarker([avg.lat, avg.lng], {
+                            radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
+                        }).addTo(refineMap);
+                        document.getElementById('refine-status').innerHTML = `Sampling... <strong>${refineSamples.length}</strong> readings — ±${avg.accuracy.toFixed(1)}m`;
+                        if (avg.accuracy <= TARGET_ACCURACY && refineSamples.length >= 3) refineFinish();
+                    }
+                },
+                () => {},
+                {enableHighAccuracy: true, maximumAge: 0, timeout: 8000}
+            );
+        }
+        refinetakeSample();
+        refineWatchId = setInterval(refinetakeSample, 1500);
 
         refineTimer = setTimeout(() => {
             if (refineSamples.length > 0) refineFinish();
@@ -256,7 +260,7 @@
     });
 
     document.getElementById('refine-cancel-btn').addEventListener('click', function() {
-        if (refineWatchId !== null) { navigator.geolocation.clearWatch(refineWatchId); refineWatchId = null; }
+        if (refineWatchId !== null) { clearInterval(refineWatchId); refineWatchId = null; }
         if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
         document.getElementById('refine-panel').style.display = 'none';
     });
