@@ -2,7 +2,13 @@
 {% block title %}Map — Emne{% endblock %}
 
 {% block content %}
-<div id="map" class="map-fullscreen"></div>
+<div class="map-container">
+    <div id="map" class="map-fullscreen"></div>
+    <div id="sidebar" class="map-sidebar">
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle sidebar">▲ <span id="sidebar-count">0</span> finds</button>
+        <ul id="sidebar-list" class="sidebar-list"></ul>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -14,14 +20,62 @@
     }).addTo(map);
 
     const markers = L.markerClusterGroup();
+    let allFeatures = [];
+    let featureLayers = {};
+    let userLatLng = null;
+
+    function distanceBetween(a, b) {
+        return map.distance(a, b);
+    }
+
+    function formatDistance(meters) {
+        if (meters < 1000) return Math.round(meters) + ' m';
+        return (meters / 1000).toFixed(1) + ' km';
+    }
+
+    function updateSidebar() {
+        const bounds = map.getBounds();
+        const visible = allFeatures.filter(f => {
+            const [lng, lat] = f.geometry.coordinates;
+            return bounds.contains([lat, lng]);
+        });
+
+        if (userLatLng) {
+            visible.sort((a, b) => {
+                const da = distanceBetween(userLatLng, [a.geometry.coordinates[1], a.geometry.coordinates[0]]);
+                const db = distanceBetween(userLatLng, [b.geometry.coordinates[1], b.geometry.coordinates[0]]);
+                return da - db;
+            });
+        }
+
+        const countEl = document.getElementById('sidebar-count');
+        const listEl = document.getElementById('sidebar-list');
+        countEl.textContent = visible.length;
+
+        listEl.innerHTML = visible.map(f => {
+            const p = f.properties;
+            const [lng, lat] = f.geometry.coordinates;
+            let dist = '';
+            if (userLatLng) {
+                dist = `<span class="sidebar-distance">${formatDistance(distanceBetween(userLatLng, [lat, lng]))}</span>`;
+            }
+            return `<li class="sidebar-item" data-id="${p.id}" data-lat="${lat}" data-lng="${lng}">
+                <span class="sidebar-title">${p.title}</span>
+                <span class="category-badge">${p.category}</span>
+                ${dist}
+            </li>`;
+        }).join('');
+    }
 
     fetch('/api/finds/geojson')
         .then(r => r.json())
         .then(data => {
+            allFeatures = data.features;
             L.geoJSON(data, {
                 pointToLayer: (feature, latlng) => L.marker(latlng),
                 onEachFeature: (feature, layer) => {
                     const p = feature.properties;
+                    featureLayers[p.id] = layer;
                     let popup = `<strong><a href="/finds/${p.id}">${p.title}</a></strong><br>`;
                     popup += `<span class="category-badge">${p.category}</span>`;
                     if (p.thumbnail_url) {
@@ -34,7 +88,10 @@
             if (data.features.length > 0) {
                 map.fitBounds(markers.getBounds(), {padding: [20, 20]});
             }
+            updateSidebar();
         });
+
+    map.on('moveend', updateSidebar);
 
     // "Record here" button
     const recordBtn = L.control({position: 'bottomright'});
@@ -50,6 +107,7 @@
     let userCircle = null;
 
     function showUserLocation(latlng, accuracy) {
+        userLatLng = latlng;
         if (userMarker) {
             userMarker.setLatLng(latlng);
             userCircle.setLatLng(latlng).setRadius(accuracy);
@@ -63,6 +121,7 @@
                 fillOpacity: 0.08, weight: 1
             }).addTo(map);
         }
+        updateSidebar();
     }
 
     if (navigator.geolocation) {
@@ -117,6 +176,25 @@
                     {enableHighAccuracy: true}
                 );
             }
+        }
+    });
+
+    // Sidebar toggle
+    document.getElementById('sidebar-toggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+
+    // Sidebar item click — open popup on map
+    document.getElementById('sidebar-list').addEventListener('click', function(e) {
+        const item = e.target.closest('.sidebar-item');
+        if (!item) return;
+        const id = item.dataset.id;
+        const lat = parseFloat(item.dataset.lat);
+        const lng = parseFloat(item.dataset.lng);
+        map.setView([lat, lng], 16);
+        const layer = featureLayers[id];
+        if (layer) {
+            markers.zoomToShowLayer(layer, () => layer.openPopup());
         }
     });
 </script>
