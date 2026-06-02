@@ -36,6 +36,62 @@
             }
         });
 
+    // "Locate me" — show user's position with blue dot + accuracy circle
+    let userMarker = null;
+    let userCircle = null;
+
+    function showUserLocation(latlng, accuracy) {
+        if (userMarker) {
+            userMarker.setLatLng(latlng);
+            userCircle.setLatLng(latlng).setRadius(accuracy);
+        } else {
+            userMarker = L.circleMarker(latlng, {
+                radius: 8, color: '#fff', weight: 2, fillColor: '#2563eb', fillOpacity: 1
+            }).addTo(map);
+            userCircle = L.circle(latlng, {
+                radius: accuracy, color: '#2563eb', fillColor: '#2563eb',
+                fillOpacity: 0.08, weight: 1
+            }).addTo(map);
+        }
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            pos => showUserLocation(
+                [pos.coords.latitude, pos.coords.longitude],
+                pos.coords.accuracy
+            ),
+            () => {},
+            {enableHighAccuracy: true, maximumAge: 10000}
+        );
+    }
+
+    // "Locate me" control button
+    const locateBtn = L.control({position: 'topleft'});
+    locateBtn.onAdd = function() {
+        const div = L.DomUtil.create('div', 'leaflet-bar');
+        div.innerHTML = '<a href="#" id="locate-btn" title="Show my location" style="font-size:18px;padding:6px 10px;display:block;background:#fff;">⊕</a>';
+        return div;
+    };
+    locateBtn.addTo(map);
+
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'locate-btn' || e.target.closest('#locate-btn')) {
+            e.preventDefault();
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => {
+                        const latlng = [pos.coords.latitude, pos.coords.longitude];
+                        showUserLocation(latlng, pos.coords.accuracy);
+                        map.setView(latlng, 16);
+                    },
+                    () => alert('Could not get your location'),
+                    {enableHighAccuracy: true}
+                );
+            }
+        }
+    });
+
     // "Record here" button
     const recordBtn = L.control({position: 'bottomright'});
     recordBtn.onAdd = function() {
