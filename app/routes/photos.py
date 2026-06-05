@@ -43,6 +43,33 @@ async def upload_photo_route(
     return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
 
 
+@router.post("/{find_id}/upload-bulk")
+async def upload_photos_bulk(
+    find_id: uuid.UUID,
+    visit_id: uuid.UUID | None = Form(None),
+    photos: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    for photo_file in photos:
+        if not photo_file.filename or not photo_file.size or photo_file.size == 0:
+            continue
+        image_bytes = await photo_file.read()
+        if not image_bytes:
+            continue
+        storage_key, thumbnail_key = upload_photo(image_bytes, str(find_id))
+        taken_at = extract_exif_datetime(image_bytes)
+        photo_record = Photo(
+            find_id=find_id,
+            visit_id=visit_id,
+            storage_key=storage_key,
+            thumbnail_key=thumbnail_key,
+            taken_at=taken_at,
+        )
+        db.add(photo_record)
+    await db.commit()
+    return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
+
+
 @router.post("/{photo_id}/delete")
 async def delete_photo_route(photo_id: uuid.UUID, next: str = Form(None), db: AsyncSession = Depends(get_db)):
     stmt = select(Photo).where(Photo.id == photo_id)

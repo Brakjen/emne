@@ -55,6 +55,22 @@
     <section class="find-photos">
         <div class="section-header">
             <h2>Photos</h2>
+            <button type="button" id="quick-capture-btn" class="btn btn-sm">📷 Quick Capture</button>
+        </div>
+
+        <!-- Quick Capture Panel -->
+        <div id="quick-capture-panel" class="quick-capture-panel" style="display:none">
+            <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
+            <div class="capture-queue" id="capture-queue"></div>
+            <div class="capture-controls">
+                <button type="button" id="capture-next-btn" class="btn btn-sm">📷 Take Photo</button>
+                <span id="capture-count" class="capture-count"></span>
+                <button type="button" id="capture-upload-btn" class="btn btn-sm btn-primary" style="display:none">⬆️ Upload All</button>
+                <button type="button" id="capture-cancel-btn" class="btn btn-sm">✕ Cancel</button>
+            </div>
+            <form id="capture-form" method="post" action="/photos/{{ find.id }}/upload-bulk" enctype="multipart/form-data" style="display:none">
+                <input type="file" id="capture-form-files" name="photos" multiple style="display:none">
+            </form>
         </div>
         {% if photo_urls %}
         <div class="photo-grid">
@@ -263,6 +279,81 @@
         if (refineWatchId !== null) { clearInterval(refineWatchId); refineWatchId = null; }
         if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
         document.getElementById('refine-panel').style.display = 'none';
+    });
+
+    // --- Quick Capture ---
+    const captureInput = document.getElementById('capture-input');
+    const captureQueue = document.getElementById('capture-queue');
+    const capturePanel = document.getElementById('quick-capture-panel');
+    const captureCountEl = document.getElementById('capture-count');
+    const captureUploadBtn = document.getElementById('capture-upload-btn');
+    let capturedFiles = [];
+
+    function updateCaptureUI() {
+        const n = capturedFiles.length;
+        captureCountEl.textContent = n > 0 ? `${n} photo${n > 1 ? 's' : ''} queued` : '';
+        captureUploadBtn.style.display = n > 0 ? '' : 'none';
+    }
+
+    document.getElementById('quick-capture-btn').addEventListener('click', function() {
+        capturePanel.style.display = '';
+        capturedFiles = [];
+        captureQueue.innerHTML = '';
+        updateCaptureUI();
+        captureInput.click();
+    });
+
+    document.getElementById('capture-next-btn').addEventListener('click', function() {
+        captureInput.value = '';
+        captureInput.click();
+    });
+
+    captureInput.addEventListener('change', function() {
+        if (!this.files || this.files.length === 0) return;
+        for (const file of this.files) {
+            capturedFiles.push(file);
+            const thumb = document.createElement('div');
+            thumb.className = 'capture-thumb';
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            thumb.appendChild(img);
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = '✕';
+            removeBtn.className = 'capture-thumb-remove';
+            const idx = capturedFiles.length - 1;
+            removeBtn.addEventListener('click', function() {
+                capturedFiles[idx] = null;
+                thumb.remove();
+                updateCaptureUI();
+            });
+            thumb.appendChild(removeBtn);
+            captureQueue.appendChild(thumb);
+        }
+        updateCaptureUI();
+    });
+
+    captureUploadBtn.addEventListener('click', function() {
+        const files = capturedFiles.filter(f => f !== null);
+        if (files.length === 0) return;
+        captureUploadBtn.disabled = true;
+        captureUploadBtn.textContent = 'Uploading…';
+        const formData = new FormData();
+        files.forEach(f => formData.append('photos', f));
+        fetch('/photos/{{ find.id }}/upload-bulk', {method: 'POST', body: formData})
+            .then(resp => { window.location.reload(); })
+            .catch(() => {
+                captureUploadBtn.disabled = false;
+                captureUploadBtn.textContent = '⬆️ Upload All';
+                alert('Upload failed. Please try again.');
+            });
+    });
+
+    document.getElementById('capture-cancel-btn').addEventListener('click', function() {
+        capturedFiles = [];
+        captureQueue.innerHTML = '';
+        capturePanel.style.display = 'none';
+        updateCaptureUI();
     });
 </script>
 {% endblock %}
