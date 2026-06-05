@@ -52,17 +52,17 @@
 
         <div id="form-map" class="form-map"></div>
 
-        {% if not find %}
         <div class="form-group">
-            <label for="photos">Photos</label>
-            <input type="file" id="photos" name="photos" accept="image/*" multiple>
+            <label>{% if find %}Add Photos{% else %}Photos{% endif %}</label>
+            <input type="file" id="photos" name="photos" accept="image/*" multiple style="display:none">
+            <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
+            <div class="capture-controls" style="margin-bottom:0.5rem">
+                <button type="button" id="quick-capture-btn" class="btn btn-sm">📷 Quick Capture</button>
+                <button type="button" id="browse-photos-btn" class="btn btn-sm">📁 Browse Library</button>
+                <span id="capture-count" class="capture-count"></span>
+            </div>
+            <div class="capture-queue" id="capture-queue"></div>
         </div>
-        {% else %}
-        <div class="form-group">
-            <label for="photos">Add Photos</label>
-            <input type="file" id="photos" name="photos" accept="image/*" multiple>
-        </div>
-        {% endif %}
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{% if find %}Save Changes{% else %}Create Find{% endif %}</button>
@@ -258,5 +258,87 @@
     if (!hasCoords && navigator.geolocation) {
         startSampling();
     }
+
+    // --- Quick Capture for form ---
+    const captureInput = document.getElementById('capture-input');
+    const photosInput = document.getElementById('photos');
+    const captureQueue = document.getElementById('capture-queue');
+    const captureCountEl = document.getElementById('capture-count');
+    let capturedFiles = [];
+    let captureActive = false;
+
+    function updateFormCaptureUI() {
+        const n = capturedFiles.filter(f => f !== null).length;
+        captureCountEl.textContent = n > 0 ? `${n} photo${n > 1 ? 's' : ''} queued` : '';
+    }
+
+    function syncFilesToInput() {
+        const dt = new DataTransfer();
+        capturedFiles.filter(f => f !== null).forEach(f => dt.items.add(f));
+        photosInput.files = dt.files;
+    }
+
+    function openCamera() {
+        captureInput.value = '';
+        captureActive = true;
+        captureInput.click();
+    }
+
+    function addFilesToQueue(files) {
+        for (const file of files) {
+            capturedFiles.push(file);
+            const thumb = document.createElement('div');
+            thumb.className = 'capture-thumb';
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            thumb.appendChild(img);
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.textContent = '✕';
+            removeBtn.className = 'capture-thumb-remove';
+            const idx = capturedFiles.length - 1;
+            removeBtn.addEventListener('click', function() {
+                capturedFiles[idx] = null;
+                thumb.remove();
+                updateFormCaptureUI();
+                syncFilesToInput();
+            });
+            thumb.appendChild(removeBtn);
+            captureQueue.appendChild(thumb);
+        }
+        updateFormCaptureUI();
+        syncFilesToInput();
+    }
+
+    document.getElementById('quick-capture-btn').addEventListener('click', function() {
+        openCamera();
+    });
+
+    document.getElementById('browse-photos-btn').addEventListener('click', function() {
+        captureActive = false;
+        const browseInput = document.createElement('input');
+        browseInput.type = 'file';
+        browseInput.accept = 'image/*';
+        browseInput.multiple = true;
+        browseInput.addEventListener('change', function() {
+            if (this.files && this.files.length > 0) {
+                addFilesToQueue(this.files);
+            }
+        });
+        browseInput.click();
+    });
+
+    captureInput.addEventListener('change', function() {
+        if (!this.files || this.files.length === 0) {
+            // User dismissed camera — stop the loop
+            captureActive = false;
+            return;
+        }
+        addFilesToQueue(this.files);
+        // Auto-reopen camera for next shot
+        if (captureActive) {
+            setTimeout(openCamera, 300);
+        }
+    });
 </script>
 {% endblock %}

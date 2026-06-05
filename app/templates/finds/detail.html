@@ -63,14 +63,10 @@
             <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
             <div class="capture-queue" id="capture-queue"></div>
             <div class="capture-controls">
-                <button type="button" id="capture-next-btn" class="btn btn-sm">📷 Take Photo</button>
                 <span id="capture-count" class="capture-count"></span>
-                <button type="button" id="capture-upload-btn" class="btn btn-sm btn-primary" style="display:none">⬆️ Upload All</button>
+                <button type="button" id="capture-upload-btn" class="btn btn-sm btn-primary" style="display:none">✓ Done — Upload All</button>
                 <button type="button" id="capture-cancel-btn" class="btn btn-sm">✕ Cancel</button>
             </div>
-            <form id="capture-form" method="post" action="/photos/{{ find.id }}/upload-bulk" enctype="multipart/form-data" style="display:none">
-                <input type="file" id="capture-form-files" name="photos" multiple style="display:none">
-            </form>
         </div>
         {% if photo_urls %}
         <div class="photo-grid">
@@ -295,21 +291,28 @@
         captureUploadBtn.style.display = n > 0 ? '' : 'none';
     }
 
+    let captureActive = false;
+
+    function openCamera() {
+        captureInput.value = '';
+        captureActive = true;
+        captureInput.click();
+    }
+
     document.getElementById('quick-capture-btn').addEventListener('click', function() {
         capturePanel.style.display = '';
         capturedFiles = [];
         captureQueue.innerHTML = '';
         updateCaptureUI();
-        captureInput.click();
-    });
-
-    document.getElementById('capture-next-btn').addEventListener('click', function() {
-        captureInput.value = '';
-        captureInput.click();
+        openCamera();
     });
 
     captureInput.addEventListener('change', function() {
-        if (!this.files || this.files.length === 0) return;
+        if (!this.files || this.files.length === 0) {
+            // User cancelled the camera — stop the loop
+            captureActive = false;
+            return;
+        }
         for (const file of this.files) {
             capturedFiles.push(file);
             const thumb = document.createElement('div');
@@ -331,9 +334,14 @@
             captureQueue.appendChild(thumb);
         }
         updateCaptureUI();
+        // Auto-reopen camera for next shot
+        if (captureActive) {
+            setTimeout(openCamera, 300);
+        }
     });
 
     captureUploadBtn.addEventListener('click', function() {
+        captureActive = false;
         const files = capturedFiles.filter(f => f !== null);
         if (files.length === 0) return;
         captureUploadBtn.disabled = true;
@@ -344,12 +352,13 @@
             .then(resp => { window.location.reload(); })
             .catch(() => {
                 captureUploadBtn.disabled = false;
-                captureUploadBtn.textContent = '⬆️ Upload All';
+                captureUploadBtn.textContent = '✓ Done — Upload All';
                 alert('Upload failed. Please try again.');
             });
     });
 
     document.getElementById('capture-cancel-btn').addEventListener('click', function() {
+        captureActive = false;
         capturedFiles = [];
         captureQueue.innerHTML = '';
         capturePanel.style.display = 'none';
