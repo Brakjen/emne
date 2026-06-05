@@ -60,7 +60,11 @@
 
         <!-- Quick Capture Panel -->
         <div id="quick-capture-panel" class="quick-capture-panel" style="display:none">
-            <input type="file" id="capture-input" accept="image/*" capture="environment" style="display:none">
+            <div class="capture-viewfinder" id="capture-viewfinder" style="display:none">
+                <video id="capture-video" autoplay playsinline muted></video>
+                <canvas id="capture-canvas" style="display:none"></canvas>
+                <button type="button" id="shutter-btn" class="shutter-btn" title="Capture"></button>
+            </div>
             <div class="capture-queue" id="capture-queue"></div>
             <div class="capture-controls">
                 <span id="capture-count" class="capture-count"></span>
@@ -278,47 +282,61 @@
     });
 
     // --- Quick Capture ---
-    const captureInput = document.getElementById('capture-input');
+    const captureVideo = document.getElementById('capture-video');
+    const captureCanvas = document.getElementById('capture-canvas');
+    const captureViewfinder = document.getElementById('capture-viewfinder');
     const captureQueue = document.getElementById('capture-queue');
     const capturePanel = document.getElementById('quick-capture-panel');
     const captureCountEl = document.getElementById('capture-count');
     const captureUploadBtn = document.getElementById('capture-upload-btn');
+    const shutterBtn = document.getElementById('shutter-btn');
     let capturedFiles = [];
+    let cameraStream = null;
 
     function updateCaptureUI() {
-        const n = capturedFiles.length;
+        const n = capturedFiles.filter(f => f !== null).length;
         captureCountEl.textContent = n > 0 ? `${n} photo${n > 1 ? 's' : ''} queued` : '';
         captureUploadBtn.style.display = n > 0 ? '' : 'none';
     }
 
-    let captureActive = false;
-
-    function openCamera() {
-        captureInput.value = '';
-        captureActive = true;
-        captureInput.click();
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(t => t.stop());
+            cameraStream = null;
+        }
+        captureViewfinder.style.display = 'none';
     }
 
-    document.getElementById('quick-capture-btn').addEventListener('click', function() {
-        capturePanel.style.display = '';
-        capturedFiles = [];
-        captureQueue.innerHTML = '';
-        updateCaptureUI();
-        openCamera();
-    });
-
-    captureInput.addEventListener('change', function() {
-        if (!this.files || this.files.length === 0) {
-            // User cancelled the camera — stop the loop
-            captureActive = false;
-            return;
+    async function startCamera() {
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {facingMode: 'environment', width: {ideal: 1920}, height: {ideal: 1440}},
+                audio: false
+            });
+            captureVideo.srcObject = cameraStream;
+            captureViewfinder.style.display = '';
+        } catch (err) {
+            alert('Could not access camera: ' + err.message);
+            stopCamera();
         }
-        for (const file of this.files) {
+    }
+
+    function takeSnapshot() {
+        const track = cameraStream && cameraStream.getVideoTracks()[0];
+        if (!track) return;
+        const settings = track.getSettings();
+        captureCanvas.width = settings.width || captureVideo.videoWidth;
+        captureCanvas.height = settings.height || captureVideo.videoHeight;
+        const ctx = captureCanvas.getContext('2d');
+        ctx.drawImage(captureVideo, 0, 0, captureCanvas.width, captureCanvas.height);
+        captureCanvas.toBlob(function(blob) {
+            if (!blob) return;
+            const file = new File([blob], `capture_${Date.now()}.jpg`, {type: 'image/jpeg'});
             capturedFiles.push(file);
             const thumb = document.createElement('div');
             thumb.className = 'capture-thumb';
             const img = document.createElement('img');
-            img.src = URL.createObjectURL(file);
+            img.src = URL.createObjectURL(blob);
             thumb.appendChild(img);
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
@@ -332,16 +350,22 @@
             });
             thumb.appendChild(removeBtn);
             captureQueue.appendChild(thumb);
-        }
+            updateCaptureUI();
+        }, 'image/jpeg', 0.85);
+    }
+
+    document.getElementById('quick-capture-btn').addEventListener('click', function() {
+        capturedFiles = [];
+        captureQueue.innerHTML = '';
+        capturePanel.style.display = '';
         updateCaptureUI();
-        // Auto-reopen camera for next shot
-        if (captureActive) {
-            setTimeout(openCamera, 300);
-        }
+        startCamera();
     });
 
+    shutterBtn.addEventListener('click', takeSnapshot);
+
     captureUploadBtn.addEventListener('click', function() {
-        captureActive = false;
+        stopCamera();
         const files = capturedFiles.filter(f => f !== null);
         if (files.length === 0) return;
         captureUploadBtn.disabled = true;
@@ -358,7 +382,7 @@
     });
 
     document.getElementById('capture-cancel-btn').addEventListener('click', function() {
-        captureActive = false;
+        stopCamera();
         capturedFiles = [];
         captureQueue.innerHTML = '';
         capturePanel.style.display = 'none';
