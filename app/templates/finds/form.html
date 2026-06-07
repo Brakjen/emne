@@ -33,6 +33,16 @@
                       placeholder="Notes about this find...">{{ find.description if find and find.description else '' }}</textarea>
         </div>
 
+        <div class="form-group">
+            <label for="species">Species (optional)</label>
+            <input type="text" id="species" name="species_name"
+                   value="{{ find.species.name if find and find.species else '' }}"
+                   list="species-options" autocomplete="off"
+                   placeholder="e.g. Bjørk, Furu, Einer">
+            <datalist id="species-options"></datalist>
+            <small class="form-hint">Norwegian name. Pick an existing one or type a new species.</small>
+        </div>
+
         <div class="form-group location-group">
             <label>Location</label>
             <div class="location-inputs">
@@ -84,6 +94,31 @@
 
 {% block scripts %}
 <script>
+    // Species autocomplete
+    const speciesInput = document.getElementById('species');
+    const speciesList = document.getElementById('species-options');
+    let speciesTimer = null;
+    if (speciesInput) {
+        const loadSpecies = (q) => {
+            fetch('/api/species?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(items => {
+                    speciesList.innerHTML = '';
+                    items.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.name;
+                        speciesList.appendChild(opt);
+                    });
+                })
+                .catch(() => {});
+        };
+        loadSpecies('');
+        speciesInput.addEventListener('input', () => {
+            clearTimeout(speciesTimer);
+            speciesTimer = setTimeout(() => loadSpecies(speciesInput.value), 200);
+        });
+    }
+
     const latInput = document.getElementById('latitude');
     const lonInput = document.getElementById('longitude');
     const accInput = document.getElementById('accuracy');

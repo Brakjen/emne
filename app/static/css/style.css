@@ -556,6 +556,59 @@ body {
 .empty-state p { margin-bottom: 1rem; }
 .empty-hint { color: var(--color-text-muted); font-size: 0.9rem; font-style: italic; }
 
+/* Species */
+.species-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: #eef7e9;
+    color: var(--color-primary);
+}
+.form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+.species-filter-form { display: inline-flex; }
+.species-filter-form select {
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.species-add-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    max-width: 500px;
+}
+.species-add-form input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    font-size: 0.95rem;
+}
+.species-list {
+    list-style: none;
+    max-width: 500px;
+}
+.species-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--color-border);
+}
+.species-name { flex: 1; font-weight: 500; }
+.species-count { color: var(--color-text-muted); font-size: 0.8rem; }
+
+
 /* Form page */
 .form-page { max-width: 600px; }
 .form-page h1 { margin-bottom: 1.5rem; }

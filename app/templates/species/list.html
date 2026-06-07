@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Species — Emne{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Species</h1>
+    <a href="/finds" class="btn">← Finds</a>
+</div>
+
+<form method="post" action="/api/species" class="species-add-form" id="species-add-form">
+    <input type="text" name="name" placeholder="Add a new species (e.g. Bjørk)" required autocomplete="off">
+    <button type="submit" class="btn btn-primary">Add</button>
+</form>
+
+{% if species_data %}
+<ul class="species-list">
+    {% for item in species_data %}
+    <li class="species-row">
+        <span class="species-name">🌿 {{ item.species.name }}</span>
+        <span class="species-count">{{ item.count }} find{{ 's' if item.count != 1 else '' }}</span>
+        <form method="post" action="/species/{{ item.species.id }}/delete" style="display:inline"
+              onsubmit="return confirm('Delete &quot;{{ item.species.name }}&quot;? Finds using it will keep their other details but lose the species link.')">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+    <p>No species yet. Add one above.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Submit the add form as a plain POST and reload to show the new species
+    const addForm = document.getElementById('species-add-form');
+    addForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fd = new FormData(addForm);
+        fetch('/api/species', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(() => window.location.reload())
+            .catch(() => addForm.submit());
+    });
+</script>
+{% endblock %}

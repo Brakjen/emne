@@ -10,6 +10,23 @@ class Base(DeclarativeBase):
     pass
 
 
+class Species(Base):
+    __tablename__ = "species"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255))
+    name_normalized: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    finds: Mapped[list["Find"]] = relationship(back_populates="species")
+
+    @staticmethod
+    def normalize(name: str) -> str:
+        return " ".join(name.strip().lower().split())
+
+
 class Find(Base):
     __tablename__ = "finds"
 
@@ -29,6 +46,9 @@ class Find(Base):
         default="watching",
         server_default="watching",
     )
+    species_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("species.id", ondelete="SET NULL"), nullable=True
+    )
     location: Mapped[object] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
     )
@@ -42,6 +62,7 @@ class Find(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
+    species: Mapped["Species | None"] = relationship(back_populates="finds")
     visits: Mapped[list["Visit"]] = relationship(
         back_populates="find", cascade="all, delete-orphan", order_by="Visit.visited_at.desc()"
     )

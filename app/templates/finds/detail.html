@@ -27,6 +27,7 @@
     {% endif %}
 
     <div class="find-meta">
+        {% if find.species %}<span>🌿 {{ find.species.name }}</span>{% endif %}
         <span>📍 {{ "%.5f"|format(lat) }}, {{ "%.5f"|format(lon) }}{% if find.location_accuracy %} (±{{ "%.0f"|format(find.location_accuracy) }}m){% endif %}</span>
         <span>📅 {{ find.created_at.strftime('%d %b %Y') }}</span>
         <a href="#" id="norgeskart-link" target="_blank" class="btn btn-sm" title="Open in Norgeskart">🗺️ Norgeskart</a>

@@ -8,17 +8,31 @@
 </div>
 
 <div class="filter-bar">
-    <a href="/finds" class="filter-chip {% if not current_category and not current_status %}active{% endif %}">All</a>
+    <a href="/finds" class="filter-chip {% if not current_category and not current_status and not current_species %}active{% endif %}">All</a>
     {% for cat in ['tree', 'sapling', 'burl', 'rock', 'mushroom', 'viewpoint', 'deadwood', 'other'] %}
-    <a href="/finds?category={{ cat }}{% if current_status %}&status={{ current_status }}{% endif %}" class="filter-chip {% if current_category == cat %}active{% endif %}">{{ cat|capitalize }}</a>
+    <a href="/finds?category={{ cat }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_species %}&species={{ current_species }}{% endif %}" class="filter-chip {% if current_category == cat %}active{% endif %}">{{ cat|capitalize }}</a>
     {% endfor %}
 </div>
 
 <div class="filter-bar">
-    <a href="/finds{% if current_category %}?category={{ current_category }}{% endif %}" class="filter-chip {% if not current_status %}active{% endif %}">Any status</a>
+    <a href="/finds{% if current_category %}?category={{ current_category }}{% endif %}{% if current_species %}{% if current_category %}&{% else %}?{% endif %}species={{ current_species }}{% endif %}" class="filter-chip {% if not current_status %}active{% endif %}">Any status</a>
     {% for st in ['watching', 'collected', 'passed'] %}
-    <a href="/finds?status={{ st }}{% if current_category %}&category={{ current_category }}{% endif %}" class="filter-chip {% if current_status == st %}active{% endif %}">{{ st|capitalize }}</a>
+    <a href="/finds?status={{ st }}{% if current_category %}&category={{ current_category }}{% endif %}{% if current_species %}&species={{ current_species }}{% endif %}" class="filter-chip {% if current_status == st %}active{% endif %}">{{ st|capitalize }}</a>
     {% endfor %}
+</div>
+
+<div class="filter-bar">
+    <form method="get" action="/finds" class="species-filter-form">
+        {% if current_category %}<input type="hidden" name="category" value="{{ current_category }}">{% endif %}
+        {% if current_status %}<input type="hidden" name="status" value="{{ current_status }}">{% endif %}
+        <select name="species" onchange="this.form.submit()">
+            <option value="">All species</option>
+            {% for s in all_species %}
+            <option value="{{ s.id }}" {% if current_species == s.id|string %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <a href="/species" class="filter-chip">Manage species</a>
 </div>
 
 {% if finds_data %}
@@ -34,6 +48,7 @@
         </div>
         <div class="find-card-body">
             <h3>{{ item.find.title }}</h3>
+            {% if item.find.species %}<span class="species-badge">🌿 {{ item.find.species.name }}</span>{% endif %}
             <span class="category-badge">{{ item.find.category }}</span>
             <span class="status-badge status-{{ item.find.status }}">{{ item.find.status }}</span>
             <time>{{ item.find.created_at.strftime('%d %b %Y') }}</time>

@@ -22,7 +22,7 @@ async def map_page(request: Request):
 
 @router.get("/api/finds/geojson")
 async def finds_geojson(db: AsyncSession = Depends(get_db)):
-    stmt = select(Find).options(selectinload(Find.photos)).order_by(Find.created_at.desc())
+    stmt = select(Find).options(selectinload(Find.photos), selectinload(Find.species)).order_by(Find.created_at.desc())
     result = await db.execute(stmt)
     finds = result.scalars().all()
 
@@ -43,6 +43,7 @@ async def finds_geojson(db: AsyncSession = Depends(get_db)):
                 "id": str(f.id),
                 "title": f.title,
                 "category": f.category,
+                "species": f.species.name if f.species else None,
                 "thumbnail_url": thumb_url,
             },
         })

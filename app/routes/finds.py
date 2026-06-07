@@ -11,13 +11,14 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models import Find, Photo, Visit
+from app.models import Find, Photo, Visit, Species
 from app.services.photo import (
     extract_exif_datetime,
     extract_exif_gps,
     get_photo_url,
     upload_photo,
 )
+from app.routes.species import get_or_create_species
 
 router = APIRouter(prefix="/finds", dependencies=[Depends(get_current_user)])
 
@@ -25,12 +26,14 @@ from app.templating import templates
 
 
 @router.get("", response_class=HTMLResponse)
-async def list_finds(request: Request, category: str | None = None, status: str | None = None, db: AsyncSession = Depends(get_db)):
-    stmt = select(Find).options(selectinload(Find.photos)).order_by(Find.created_at.desc())
+async def list_finds(request: Request, category: str | None = None, status: str | None = None, species: uuid.UUID | None = None, db: AsyncSession = Depends(get_db)):
+    stmt = select(Find).options(selectinload(Find.photos), selectinload(Find.species)).order_by(Find.created_at.desc())
     if category:
         stmt = stmt.where(Find.category == category)
     if status:
         stmt = stmt.where(Find.status == status)
+    if species:
+        stmt = stmt.where(Find.species_id == species)
     result = await db.execute(stmt)
     finds = result.scalars().all()
 
@@ -48,10 +51,16 @@ async def list_finds(request: Request, category: str | None = None, status: str 
             "thumbnail_url": thumb_url,
         })
 
+    # Species used for the filter dropdown
+    species_result = await db.execute(select(Species).order_by(Species.name))
+    all_species = species_result.scalars().all()
+
     return templates.TemplateResponse(request, "finds/list.html", {
         "finds_data": finds_data,
         "current_category": category,
         "current_status": status,
+        "current_species": str(species) if species else None,
+        "all_species": all_species,
     })
 
 
@@ -70,6 +79,7 @@ async def create_find(
     title: str = Form(...),
     category: str = Form("other"),
     description: str = Form(""),
+    species_name: str = Form(""),
     latitude: float = Form(...),
     longitude: float = Form(...),
     accuracy: float | None = Form(None),
@@ -77,10 +87,12 @@ async def create_find(
     db: AsyncSession = Depends(get_db),
 ):
     point = from_shape(Point(longitude, latitude), srid=4326)
+    species = await get_or_create_species(db, species_name)
     find = Find(
         title=title,
         category=category,
         description=description or None,
+        species_id=species.id if species else None,
         location=point,
         location_accuracy=accuracy,
     )
@@ -146,6 +158,7 @@ async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = D
         select(Find)
         .options(
             selectinload(Find.photos),
+            selectinload(Find.species),
             selectinload(Find.visits).selectinload(Visit.photos),
         )
         .where(Find.id == find_id)
@@ -171,7 +184,7 @@ async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = D
 
 @router.get("/{find_id}/edit", response_class=HTMLResponse)
 async def edit_find_form(request: Request, find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
-    stmt = select(Find).where(Find.id == find_id)
+    stmt = select(Find).options(selectinload(Find.species)).where(Find.id == find_id)
     result = await db.execute(stmt)
     find = result.scalar_one_or_none()
     if not find:
@@ -191,6 +204,7 @@ async def update_find(
     title: str = Form(...),
     category: str = Form("other"),
     description: str = Form(""),
+    species_name: str = Form(""),
     latitude: float = Form(...),
     longitude: float = Form(...),
     accuracy: float | None = Form(None),
@@ -203,9 +217,11 @@ async def update_find(
     if not find:
         return HTMLResponse("Not found", status_code=404)
 
+    species = await get_or_create_species(db, species_name)
     find.title = title
     find.category = category
     find.description = description or None
+    find.species_id = species.id if species else None
     find.location = from_shape(Point(longitude, latitude), srid=4326)
     find.location_accuracy = accuracy
 

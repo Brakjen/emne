@@ -7,6 +7,7 @@ from app.routes import auth as auth_routes
 from app.routes import finds as finds_routes
 from app.routes import map as map_routes
 from app.routes import photos as photos_routes
+from app.routes import species as species_routes
 from app.routes import visits as visits_routes
 
 app = FastAPI(title="Emne", docs_url=None, redoc_url=None)
@@ -44,3 +45,4 @@ app.include_router(finds_routes.router)
 app.include_router(visits_routes.router)
 app.include_router(photos_routes.router)
 app.include_router(map_routes.router)
+app.include_router(species_routes.router)
