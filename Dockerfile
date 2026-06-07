@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir .
 COPY . .
 
 ARG COMMIT_SHA=unknown
-RUN echo "$COMMIT_SHA" > /app/VERSION
+RUN echo "${COMMIT_SHA}-$(date +%Y%m%d%H%M%S)" > /app/VERSION
 
 ENV PYTHONPATH=/app
 
