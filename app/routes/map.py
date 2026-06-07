@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import Find
-from app.services.photo import get_photo_url
+from app.services.photo import get_photo_url, resolve_cover_photo
 
 router = APIRouter(dependencies=[Depends(get_current_user)])
 
@@ -30,8 +30,9 @@ async def finds_geojson(db: AsyncSession = Depends(get_db)):
     for f in finds:
         point = to_shape(f.location)
         thumb_url = None
-        if f.photos:
-            thumb_url = get_photo_url(f.photos[0].thumbnail_key)
+        cover = resolve_cover_photo(f)
+        if cover:
+            thumb_url = get_photo_url(cover.thumbnail_key)
 
         features.append({
             "type": "Feature",

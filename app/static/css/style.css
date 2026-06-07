@@ -481,6 +481,27 @@ body {
     cursor: pointer;
     font-size: 0.7rem;
 }
+.photo-cover {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+}
+.photo-cover button {
+    background: rgba(0,0,0,0.6);
+    color: #ffd54a;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    line-height: 1;
+    padding: 0;
+}
+.photo-item.is-cover {
+    border-color: #ffb300;
+    box-shadow: 0 0 0 2px #ffb300;
+}
 .upload-form {
     display: flex;
     gap: 0.5rem;

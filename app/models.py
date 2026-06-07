@@ -49,6 +49,9 @@ class Find(Base):
     species_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("species.id", ondelete="SET NULL"), nullable=True
     )
+    cover_photo_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("photos.id", ondelete="SET NULL"), nullable=True
+    )
     location: Mapped[object] = mapped_column(
         Geometry(geometry_type="POINT", srid=4326),
     )
@@ -67,7 +70,13 @@ class Find(Base):
         back_populates="find", cascade="all, delete-orphan", order_by="Visit.visited_at.desc()"
     )
     photos: Mapped[list["Photo"]] = relationship(
-        back_populates="find", cascade="all, delete-orphan", order_by="Photo.created_at.desc()"
+        back_populates="find",
+        cascade="all, delete-orphan",
+        order_by="Photo.created_at.desc()",
+        foreign_keys="Photo.find_id",
+    )
+    cover_photo: Mapped["Photo | None"] = relationship(
+        foreign_keys="Find.cover_photo_id", post_update=True
     )
 
 
@@ -104,5 +113,5 @@ class Photo(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
-    find: Mapped["Find"] = relationship(back_populates="photos")
+    find: Mapped["Find"] = relationship(back_populates="photos", foreign_keys="Photo.find_id")
     visit: Mapped["Visit | None"] = relationship(back_populates="photos")

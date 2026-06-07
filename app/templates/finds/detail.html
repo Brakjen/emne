@@ -81,10 +81,17 @@
         {% if photo_urls %}
         <div class="photo-grid">
             {% for photo, full_url, thumb_url in photo_urls %}
-            <div class="photo-item">
+            <div class="photo-item {% if find.cover_photo_id == photo.id %}is-cover{% endif %}">
                 <a href="{{ full_url }}" target="_blank">
                     <img src="{{ thumb_url }}" alt="{{ photo.caption or find.title }}" loading="lazy">
                 </a>
+                <form method="post" action="/finds/{{ find.id }}/cover" class="photo-cover">
+                    <input type="hidden" name="photo_id" value="{{ photo.id }}">
+                    <button type="submit"
+                            title="{% if find.cover_photo_id == photo.id %}Cover image (click to unset){% else %}Set as cover{% endif %}">
+                        {% if find.cover_photo_id == photo.id %}⭐{% else %}☆{% endif %}
+                    </button>
+                </form>
                 <form method="post" action="/photos/{{ photo.id }}/caption" class="caption-form">
                     <input type="text" name="caption" value="{{ photo.caption or '' }}" placeholder="Add caption…" class="caption-input">
                     <button type="submit" class="btn btn-xs" title="Save caption">💾</button>

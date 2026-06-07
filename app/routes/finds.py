@@ -16,6 +16,7 @@ from app.services.photo import (
     extract_exif_datetime,
     extract_exif_gps,
     get_photo_url,
+    resolve_cover_photo,
     upload_photo,
 )
 from app.routes.species import get_or_create_species
@@ -42,8 +43,9 @@ async def list_finds(request: Request, category: str | None = None, status: str 
     for f in finds:
         point = to_shape(f.location)
         thumb_url = None
-        if f.photos:
-            thumb_url = get_photo_url(f.photos[0].thumbnail_key)
+        cover = resolve_cover_photo(f)
+        if cover:
+            thumb_url = get_photo_url(cover.thumbnail_key)
         finds_data.append({
             "find": f,
             "lat": point.y,
@@ -131,6 +133,32 @@ async def update_status(
     if status in ("watching", "collected", "passed"):
         find.status = status
         await db.commit()
+    return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
+
+
+@router.post("/{find_id}/cover")
+async def set_cover(
+    find_id: uuid.UUID,
+    photo_id: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Find).options(selectinload(Find.photos)).where(Find.id == find_id)
+    )
+    find = result.scalar_one_or_none()
+    if not find:
+        return HTMLResponse("Not found", status_code=404)
+
+    if photo_id:
+        # Only allow a photo that belongs to this find; toggle off if re-selected
+        target = uuid.UUID(photo_id)
+        if find.cover_photo_id == target:
+            find.cover_photo_id = None
+        elif any(p.id == target for p in find.photos):
+            find.cover_photo_id = target
+    else:
+        find.cover_photo_id = None
+    await db.commit()
     return RedirectResponse(url=f"/finds/{find_id}", status_code=303)
 
 

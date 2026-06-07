@@ -164,3 +164,20 @@ def get_photo_url(key: str) -> str:
         Params={"Bucket": settings.s3_bucket_name, "Key": key},
         ExpiresIn=3600,
     )
+
+
+def resolve_cover_photo(find) -> "object | None":
+    """Return the Photo to use as the Find's thumbnail.
+
+    Resolution order: explicitly chosen cover photo, else the oldest photo,
+    else None. Requires ``find.photos`` to be loaded (ordered created_at desc).
+    """
+    if not find.photos:
+        return None
+    if find.cover_photo_id:
+        for p in find.photos:
+            if p.id == find.cover_photo_id:
+                return p
+    # photos are ordered newest-first, so the oldest is last
+    return find.photos[-1]
+
