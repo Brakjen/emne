@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.auth import verify_session_token, SESSION_COOKIE
+from app.routes import ai as ai_routes
 from app.routes import auth as auth_routes
 from app.routes import finds as finds_routes
 from app.routes import map as map_routes
@@ -48,3 +49,4 @@ app.include_router(photos_routes.router)
 app.include_router(map_routes.router)
 app.include_router(species_routes.router)
 app.include_router(settings_routes.router)
+app.include_router(ai_routes.router)

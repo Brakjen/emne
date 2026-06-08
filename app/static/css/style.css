@@ -53,11 +53,11 @@ body {
 .bottom-nav-item {
     color: rgba(255,255,255,0.85);
     text-decoration: none;
-    font-size: 0.85rem;
-    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.55rem;
     border-radius: 8px;
     text-align: center;
-    min-width: 3.5rem;
+    min-width: 2.75rem;
     transition: background 0.15s;
 }
 .bottom-nav-item:hover,
@@ -945,6 +945,44 @@ body.cam-open { overflow: hidden; }
     padding-top: 1rem;
     border-top: 1px solid var(--color-border);
 }
+
+/* AI assistant page */
+.ai-region {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+}
+.ai-region-edit { margin-left: 0.4rem; font-size: 0.85rem; }
+.ai-feature-list {
+    display: grid;
+    gap: 0.75rem;
+}
+.ai-feature-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+}
+.ai-feature-card h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.ai-feature-card p { margin: 0; color: var(--color-text-muted); font-size: 0.9rem; }
+.ai-feature-where {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-primary-light);
+}
+.ai-entry {
+    margin: 1rem 0;
+}
+.ai-entry-panel {
+    margin-top: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    background: #faf9f6;
+}
+.ai-entry-panel ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
+.ai-entry-panel li { margin-bottom: 0.35rem; font-size: 0.9rem; }
+.ai-entry-soon { color: var(--color-text-muted); font-size: 0.8rem; }
 
 /* Responsive */
 @media (max-width: 600px) {

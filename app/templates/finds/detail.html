@@ -52,6 +52,21 @@
     <!-- Mini map -->
     <div id="detail-map" class="detail-map"></div>
 
+    {% if ai_configured and ai_agents %}
+    <!-- Ask AI (scaffold — actions wired up by feature issues) -->
+    <div class="ai-entry">
+        <button type="button" id="ask-ai-btn" class="btn btn-sm">🤖 Ask AI</button>
+        <div id="ask-ai-panel" class="ai-entry-panel" style="display:none">
+            <p class="ai-entry-soon">AI actions for this find:</p>
+            <ul>
+                {% for agent in ai_agents %}
+                <li><strong>{{ agent.label }}</strong> — {{ agent.description }} <span class="ai-entry-soon">(coming soon)</span></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Photos -->
     <section class="find-photos">
         <div class="section-header">
@@ -275,6 +290,15 @@
         if (refineTimer) { clearTimeout(refineTimer); refineTimer = null; }
         document.getElementById('refine-panel').style.display = 'none';
     });
+
+    // --- Ask AI (scaffold) ---
+    const askAiBtn = document.getElementById('ask-ai-btn');
+    if (askAiBtn) {
+        askAiBtn.addEventListener('click', function() {
+            const panel = document.getElementById('ask-ai-panel');
+            panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        });
+    }
 
     // --- Quick Capture (fullscreen) ---
     document.getElementById('quick-capture-btn').addEventListener('click', function() {

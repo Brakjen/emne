@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}AI assistant — Emne{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>🤖 AI assistant</h1>
+    <a href="/settings" class="btn">⚙️ Settings</a>
+</div>
+
+{% if not configured %}
+<div class="settings-status warn">
+    ⚠ OpenAI API key is not set. Set the <code>EMNE_OPENAI_API_KEY</code> secret to enable AI features.
+</div>
+{% else %}
+<p class="ai-region">Local context: <strong>{{ region }}</strong> <a href="/settings" class="ai-region-edit">change</a></p>
+
+{% if enabled %}
+<div class="ai-feature-list">
+    {% for agent in enabled %}
+    <div class="ai-feature-card">
+        <h3>{{ agent.label }}</h3>
+        <p>{{ agent.description }}</p>
+        {% if agent.find_scoped %}
+        <span class="ai-feature-where">Available from each find's page</span>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No AI features are enabled yet.</p>
+    <a href="/settings" class="btn btn-primary">Enable features in Settings</a>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

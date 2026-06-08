@@ -20,6 +20,8 @@ from app.services.photo import (
     upload_photo,
 )
 from app.routes.species import get_or_create_species
+from app.services import ai as ai_service
+from app.services.settings import get_app_settings
 
 router = APIRouter(prefix="/finds", dependencies=[Depends(get_current_user)])
 
@@ -200,6 +202,9 @@ async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = D
     all_photo_urls = [(p, get_photo_url(p.storage_key), get_photo_url(p.thumbnail_key)) for p in find.photos]
     initial_photo_urls = [(p, url, thumb) for p, url, thumb in all_photo_urls if p.visit_id is None]
 
+    app_settings = await get_app_settings(db)
+    ai_agents = ai_service.enabled_agents(app_settings, find_scoped=True)
+
     return templates.TemplateResponse(request, "finds/detail.html", {
         "find": find,
         "lat": point.y,
@@ -207,6 +212,8 @@ async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = D
         "photo_urls": all_photo_urls,
         "initial_photo_urls": initial_photo_urls,
         "get_photo_url": get_photo_url,
+        "ai_configured": ai_service.is_configured(),
+        "ai_agents": ai_agents,
     })
 
 
