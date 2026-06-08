@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Form, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import Point
 from sqlalchemy import select
@@ -215,6 +215,58 @@ async def find_detail(request: Request, find_id: uuid.UUID, db: AsyncSession = D
         "ai_configured": ai_service.is_configured(),
         "ai_agents": ai_agents,
     })
+
+
+@router.post("/{find_id}/ai/review-checklist")
+async def ai_review_checklist(find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    app_settings = await get_app_settings(db)
+
+    if not ai_service.is_configured():
+        return JSONResponse(
+            {"error": "AI is not configured. Set EMNE_OPENAI_API_KEY first."},
+            status_code=503,
+        )
+
+    if not app_settings.ai_review_checklist:
+        return JSONResponse(
+            {"error": "Review checklist is disabled in Settings."},
+            status_code=403,
+        )
+
+    stmt = (
+        select(Find)
+        .options(selectinload(Find.photos), selectinload(Find.species))
+        .where(Find.id == find_id)
+    )
+    result = await db.execute(stmt)
+    find = result.scalar_one_or_none()
+    if not find:
+        return JSONResponse({"error": "Find not found"}, status_code=404)
+
+    species_name = find.species.name if find.species else "Unknown"
+    user_text = (
+        "Create a practical bonsai/yamadori review checklist for this find.\n"
+        f"Title: {find.title}\n"
+        f"Category: {find.category}\n"
+        f"Status: {find.status}\n"
+        f"Species: {species_name}\n"
+        f"Description: {find.description or '(none)'}"
+    )
+
+    try:
+        content = await ai_service.complete(
+            "review_checklist",
+            user_text,
+            region=app_settings.region,
+            image_urls=ai_service.find_image_urls(find, use_full=False, limit=4),
+        )
+    except ai_service.AINotConfigured:
+        return JSONResponse(
+            {"error": "AI is not configured. Set EMNE_OPENAI_API_KEY first."},
+            status_code=503,
+        )
+
+    return JSONResponse({"content": content.strip()})
 
 
 @router.get("/{find_id}/edit", response_class=HTMLResponse)

@@ -60,9 +60,17 @@
             <p class="ai-entry-soon">AI actions for this find:</p>
             <ul>
                 {% for agent in ai_agents %}
-                <li><strong>{{ agent.label }}</strong> — {{ agent.description }} <span class="ai-entry-soon">(coming soon)</span></li>
+                <li>
+                    <strong>{{ agent.label }}</strong> — {{ agent.description }}
+                    {% if agent.key == 'review_checklist' %}
+                    <button type="button" class="btn btn-xs" id="ai-review-checklist-btn">Run</button>
+                    {% else %}
+                    <span class="ai-entry-soon">(coming soon)</span>
+                    {% endif %}
+                </li>
                 {% endfor %}
             </ul>
+            <div id="ai-review-checklist-result" class="ai-result" style="display:none"></div>
         </div>
     </div>
     {% endif %}
@@ -297,6 +305,30 @@
         askAiBtn.addEventListener('click', function() {
             const panel = document.getElementById('ask-ai-panel');
             panel.style.display = panel.style.display === 'none' ? '' : 'none';
+        });
+    }
+
+    const reviewChecklistBtn = document.getElementById('ai-review-checklist-btn');
+    if (reviewChecklistBtn) {
+        reviewChecklistBtn.addEventListener('click', async function() {
+            const result = document.getElementById('ai-review-checklist-result');
+            result.style.display = '';
+            result.textContent = 'Generating checklist...';
+            reviewChecklistBtn.disabled = true;
+            try {
+                const response = await fetch('/finds/{{ find.id }}/ai/review-checklist', {
+                    method: 'POST',
+                });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Checklist generation failed.');
+                }
+                result.textContent = payload.content || 'No checklist was returned.';
+            } catch (err) {
+                result.textContent = err.message || 'Checklist generation failed.';
+            } finally {
+                reviewChecklistBtn.disabled = false;
+            }
         });
     }
 

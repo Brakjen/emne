@@ -983,6 +983,14 @@ body.cam-open { overflow: hidden; }
 .ai-entry-panel ul { margin: 0.5rem 0 0; padding-left: 1.1rem; }
 .ai-entry-panel li { margin-bottom: 0.35rem; font-size: 0.9rem; }
 .ai-entry-soon { color: var(--color-text-muted); font-size: 0.8rem; }
+.ai-result {
+    margin-top: 0.75rem;
+    border-top: 1px dashed var(--color-border);
+    padding-top: 0.75rem;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    font-size: 0.92rem;
+}
 
 /* Responsive */
 @media (max-width: 600px) {
