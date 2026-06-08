@@ -1027,31 +1027,61 @@ body.cam-open { overflow: hidden; }
     display: none;
 }
 
-/* Resources */
-.resource-card {
+/* Field Guide */
+.guide-intro {
+    color: var(--color-text-muted);
+    margin-bottom: 1.25rem;
+}
+.guide-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.guide-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    text-decoration: none;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-primary-light);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, #fff, #f7f5ef);
+    padding: 0.9rem 1rem;
+    transition: background 0.15s;
+}
+.guide-card:hover {
+    background: linear-gradient(180deg, #fff, #f3f0e7);
+}
+.guide-card-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+.guide-card-text h3 {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+}
+.guide-card-text p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+}
+.guide-article {
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
     background: var(--color-surface);
     padding: 1rem 1.1rem;
 }
-.resource-card h2 {
-    margin-bottom: 0.4rem;
-}
-.resource-card h3 {
-    margin-top: 0.8rem;
-    margin-bottom: 0.25rem;
-    font-size: 0.98rem;
-}
-.resource-card p {
-    margin-bottom: 0.45rem;
-}
-.resource-card ul {
-    margin: 0.2rem 0 0.4rem;
-    padding-left: 1.1rem;
-}
-.resource-card li {
-    margin: 0.1rem 0;
-}
+.guide-article h1 { font-size: 1.35rem; margin-bottom: 0.6rem; }
+.guide-article h2 { font-size: 1.1rem; margin: 1rem 0 0.4rem; }
+.guide-article h3 { font-size: 0.98rem; margin: 0.8rem 0 0.25rem; }
+.guide-article p { margin-bottom: 0.45rem; }
+.guide-article ul { margin: 0.2rem 0 0.6rem; padding-left: 1.1rem; }
+.guide-article li { margin: 0.2rem 0; }
+.guide-article table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 0.8rem; font-size: 0.9rem; }
+.guide-article th, .guide-article td { text-align: left; padding: 0.4rem 0.6rem; border: 1px solid var(--color-border); }
+.guide-article th { background: var(--color-bg); }
+.guide-article strong { font-weight: 600; }
 
 /* Responsive */
 @media (max-width: 600px) {

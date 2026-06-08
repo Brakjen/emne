@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ article.title }} — Field Guide — Emne{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/guide" class="btn btn-sm">← Back</a>
+    <h1>{{ article.icon }} {{ article.title }}</h1>
+</div>
+
+<article id="guide-content" class="guide-article"></article>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+    const raw = {{ content | tojson }};
+    const html = marked.parse(raw, { breaks: true });
+    document.getElementById('guide-content').innerHTML = DOMPurify.sanitize(html);
+</script>
+{% endblock %}

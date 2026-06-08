@@ -8,7 +8,7 @@ from app.routes import auth as auth_routes
 from app.routes import finds as finds_routes
 from app.routes import map as map_routes
 from app.routes import photos as photos_routes
-from app.routes import resources as resources_routes
+from app.routes import guide as guide_routes
 from app.routes import settings as settings_routes
 from app.routes import species as species_routes
 from app.routes import visits as visits_routes
@@ -51,4 +51,4 @@ app.include_router(map_routes.router)
 app.include_router(species_routes.router)
 app.include_router(settings_routes.router)
 app.include_router(ai_routes.router)
-app.include_router(resources_routes.router)
+app.include_router(guide_routes.router)
