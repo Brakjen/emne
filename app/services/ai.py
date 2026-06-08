@@ -77,13 +77,14 @@ AGENTS: dict[str, AgentConfig] = {
     "review_checklist": AgentConfig(
         key="review_checklist",
         settings_flag="ai_review_checklist",
-        label="Review checklist",
-        description="Generate a collecting/review checklist for a find.",
+        label="Find-specific review",
+        description="Highlight this find's concrete strengths, risks and next checks.",
         instructions=(
-            "Produce a short, practical checklist for assessing and (if "
-            "appropriate) collecting this find as bonsai/yamadori material: trunk "
-            "and nebari quality, taper, health, root situation, access, and the "
-            "permissions or precautions needed. Keep it scannable as bullet points."
+            "Assume the user already knows the baseline yamadori checklist. Focus "
+            "only on observations specific to this find from the provided notes and "
+            "photos: concrete strengths, concrete concerns, and 3-6 next checks to "
+            "confirm in the field. Avoid generic checklist boilerplate unless it is "
+            "directly justified by this find's details. Keep it concise and scannable."
         ),
         temperature=0.4,
     ),

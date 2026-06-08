@@ -987,9 +987,47 @@ body.cam-open { overflow: hidden; }
     margin-top: 0.75rem;
     border-top: 1px dashed var(--color-border);
     padding-top: 0.75rem;
-    white-space: pre-wrap;
+    white-space: normal;
     line-height: 1.4;
     font-size: 0.92rem;
+}
+.ai-result p { margin: 0 0 0.35rem; }
+.ai-result ul,
+.ai-result ol {
+    margin: 0.2rem 0 0.45rem;
+    padding-left: 1.05rem;
+}
+.ai-result li {
+    margin: 0.12rem 0;
+}
+.ai-result br + br {
+    display: none;
+}
+
+/* Resources */
+.resource-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    padding: 1rem 1.1rem;
+}
+.resource-card h2 {
+    margin-bottom: 0.4rem;
+}
+.resource-card h3 {
+    margin-top: 0.8rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.98rem;
+}
+.resource-card p {
+    margin-bottom: 0.45rem;
+}
+.resource-card ul {
+    margin: 0.2rem 0 0.4rem;
+    padding-left: 1.1rem;
+}
+.resource-card li {
+    margin: 0.1rem 0;
 }
 
 /* Responsive */
