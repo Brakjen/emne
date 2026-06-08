@@ -59,25 +59,6 @@
             <button type="button" id="quick-capture-btn" class="btn btn-sm">📷 Quick Capture</button>
         </div>
 
-        <!-- Quick Capture Panel -->
-        <div id="quick-capture-panel" class="quick-capture-panel" style="display:none">
-            <div class="capture-viewfinder" id="capture-viewfinder" style="display:none">
-                <video id="capture-video" autoplay playsinline muted></video>
-                <canvas id="capture-canvas" style="display:none"></canvas>
-                <button type="button" id="camera-switch-btn" class="camera-switch-btn" title="Switch camera" style="display:none">🔄</button>
-                <div class="zoom-control" id="zoom-control" style="display:none">
-                    <span class="zoom-label" id="zoom-label">1.0×</span>
-                    <input type="range" id="zoom-slider" min="1" max="4" step="0.1" value="1">
-                </div>
-                <button type="button" id="shutter-btn" class="shutter-btn" title="Capture"></button>
-            </div>
-            <div class="capture-queue" id="capture-queue"></div>
-            <div class="capture-controls">
-                <span id="capture-count" class="capture-count"></span>
-                <button type="button" id="capture-upload-btn" class="btn btn-sm btn-primary" style="display:none">✓ Done — Upload All</button>
-                <button type="button" id="capture-cancel-btn" class="btn btn-sm">✕ Cancel</button>
-            </div>
-        </div>
         {% if photo_urls %}
         <div class="photo-grid">
             {% for photo, full_url, thumb_url in photo_urls %}
@@ -171,6 +152,7 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
+<script src="/static/js/capture.js?v={{ version }}"></script>
 <script>
     const lat = {{ lat }};
     const lon = {{ lon }};
@@ -294,183 +276,18 @@
         document.getElementById('refine-panel').style.display = 'none';
     });
 
-    // --- Quick Capture ---
-    const captureVideo = document.getElementById('capture-video');
-    const captureCanvas = document.getElementById('capture-canvas');
-    const captureViewfinder = document.getElementById('capture-viewfinder');
-    const captureQueue = document.getElementById('capture-queue');
-    const capturePanel = document.getElementById('quick-capture-panel');
-    const captureCountEl = document.getElementById('capture-count');
-    const captureUploadBtn = document.getElementById('capture-upload-btn');
-    const shutterBtn = document.getElementById('shutter-btn');
-    const zoomControl = document.getElementById('zoom-control');
-    const zoomSlider = document.getElementById('zoom-slider');
-    const zoomLabel = document.getElementById('zoom-label');
-    const cameraSwitchBtn = document.getElementById('camera-switch-btn');
-    let capturedFiles = [];
-    let cameraStream = null;
-    let videoTrack = null;
-    let nativeZoom = false;
-    let digitalZoom = 1;
-    let videoDevices = [];
-    let currentDeviceIndex = 0;
-
-    function updateCaptureUI() {
-        const n = capturedFiles.filter(f => f !== null).length;
-        captureCountEl.textContent = n > 0 ? `${n} photo${n > 1 ? 's' : ''} queued` : '';
-        captureUploadBtn.style.display = n > 0 ? '' : 'none';
-    }
-
-    function stopCamera() {
-        if (cameraStream) {
-            cameraStream.getTracks().forEach(t => t.stop());
-            cameraStream = null;
-        }
-        videoTrack = null;
-        captureViewfinder.style.display = 'none';
-    }
-
-    async function listCameras() {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            videoDevices = devices.filter(d => d.kind === 'videoinput');
-            cameraSwitchBtn.style.display = videoDevices.length > 1 ? '' : 'none';
-        } catch (e) { /* ignore */ }
-    }
-
-    function setupZoom() {
-        digitalZoom = 1;
-        captureVideo.style.transform = '';
-        const caps = videoTrack && videoTrack.getCapabilities ? videoTrack.getCapabilities() : {};
-        if (caps && caps.zoom) {
-            nativeZoom = true;
-            zoomSlider.min = caps.zoom.min;
-            zoomSlider.max = caps.zoom.max;
-            zoomSlider.step = caps.zoom.step || 0.1;
-            const settings = videoTrack.getSettings();
-            zoomSlider.value = settings.zoom || caps.zoom.min;
-            zoomLabel.textContent = parseFloat(zoomSlider.value).toFixed(1) + '×';
-        } else {
-            nativeZoom = false;
-            zoomSlider.min = 1;
-            zoomSlider.max = 4;
-            zoomSlider.step = 0.1;
-            zoomSlider.value = 1;
-            zoomLabel.textContent = '1.0×';
-        }
-        zoomControl.style.display = '';
-    }
-
-    async function startCamera(deviceId) {
-        stopCamera();
-        try {
-            const constraints = {
-                video: deviceId
-                    ? {deviceId: {exact: deviceId}}
-                    : {facingMode: 'environment', width: {ideal: 1920}, height: {ideal: 1440}},
-                audio: false
-            };
-            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-            captureVideo.srcObject = cameraStream;
-            videoTrack = cameraStream.getVideoTracks()[0];
-            captureViewfinder.style.display = '';
-            setupZoom();
-            await listCameras();
-        } catch (err) {
-            alert('Could not access camera: ' + err.message);
-            stopCamera();
-        }
-    }
-
-    zoomSlider.addEventListener('input', function() {
-        const val = parseFloat(this.value);
-        zoomLabel.textContent = val.toFixed(1) + '×';
-        if (nativeZoom && videoTrack) {
-            videoTrack.applyConstraints({advanced: [{zoom: val}]}).catch(() => {});
-        } else {
-            digitalZoom = val;
-            captureVideo.style.transform = `scale(${val})`;
-        }
-    });
-
-    cameraSwitchBtn.addEventListener('click', function() {
-        if (videoDevices.length < 2) return;
-        currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-        startCamera(videoDevices[currentDeviceIndex].deviceId);
-    });
-
-    function takeSnapshot() {
-        if (!videoTrack) return;
-        const vw = captureVideo.videoWidth;
-        const vh = captureVideo.videoHeight;
-        // Apply digital zoom by cropping the center region
-        const z = nativeZoom ? 1 : digitalZoom;
-        const sw = vw / z;
-        const sh = vh / z;
-        const sx = (vw - sw) / 2;
-        const sy = (vh - sh) / 2;
-        captureCanvas.width = sw;
-        captureCanvas.height = sh;
-        const ctx = captureCanvas.getContext('2d');
-        ctx.drawImage(captureVideo, sx, sy, sw, sh, 0, 0, sw, sh);
-        captureCanvas.toBlob(function(blob) {
-            if (!blob) return;
-            const file = new File([blob], `capture_${Date.now()}.jpg`, {type: 'image/jpeg'});
-            capturedFiles.push(file);
-            const thumb = document.createElement('div');
-            thumb.className = 'capture-thumb';
-            const img = document.createElement('img');
-            img.src = URL.createObjectURL(blob);
-            thumb.appendChild(img);
-            const removeBtn = document.createElement('button');
-            removeBtn.type = 'button';
-            removeBtn.textContent = '✕';
-            removeBtn.className = 'capture-thumb-remove';
-            const idx = capturedFiles.length - 1;
-            removeBtn.addEventListener('click', function() {
-                capturedFiles[idx] = null;
-                thumb.remove();
-                updateCaptureUI();
-            });
-            thumb.appendChild(removeBtn);
-            captureQueue.appendChild(thumb);
-            updateCaptureUI();
-        }, 'image/jpeg', 0.85);
-    }
-
+    // --- Quick Capture (fullscreen) ---
     document.getElementById('quick-capture-btn').addEventListener('click', function() {
-        capturedFiles = [];
-        captureQueue.innerHTML = '';
-        capturePanel.style.display = '';
-        updateCaptureUI();
-        startCamera();
-    });
-
-    shutterBtn.addEventListener('click', takeSnapshot);
-
-    captureUploadBtn.addEventListener('click', function() {
-        stopCamera();
-        const files = capturedFiles.filter(f => f !== null);
-        if (files.length === 0) return;
-        captureUploadBtn.disabled = true;
-        captureUploadBtn.textContent = 'Uploading…';
-        const formData = new FormData();
-        files.forEach(f => formData.append('photos', f));
-        fetch('/photos/{{ find.id }}/upload-bulk', {method: 'POST', body: formData})
-            .then(resp => { window.location.reload(); })
-            .catch(() => {
-                captureUploadBtn.disabled = false;
-                captureUploadBtn.textContent = '✓ Done — Upload All';
-                alert('Upload failed. Please try again.');
-            });
-    });
-
-    document.getElementById('capture-cancel-btn').addEventListener('click', function() {
-        stopCamera();
-        capturedFiles = [];
-        captureQueue.innerHTML = '';
-        capturePanel.style.display = 'none';
-        updateCaptureUI();
+        EmneCapture.open({
+            onDone: function(files) {
+                if (!files.length) return;
+                const formData = new FormData();
+                files.forEach(f => formData.append('photos', f));
+                fetch('/photos/{{ find.id }}/upload-bulk', {method: 'POST', body: formData})
+                    .then(() => { window.location.reload(); })
+                    .catch(() => { alert('Upload failed. Please try again.'); });
+            }
+        });
     });
 </script>
 {% endblock %}
