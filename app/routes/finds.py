@@ -301,12 +301,7 @@ async def ai_species_id(find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
             status_code=400,
         )
 
-    user_text = (
-        f"Identify the species in these photos.\n"
-        f"Title: {find.title}\n"
-        f"Category: {find.category}\n"
-        f"Notes: {find.description or '(none)'}"
-    )
+    user_text = "Identify the species shown in these photos."
 
     try:
         content = await ai_service.complete(
