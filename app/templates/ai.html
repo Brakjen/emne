@@ -17,6 +17,11 @@
 {% else %}
 <p class="ai-region">Local context: <strong>{{ region }}</strong> <a href="/settings" class="ai-region-edit">change</a></p>
 
+<a href="/resources#yamadori-checklist" class="resource-cta-card">
+    <h3>Open Yamadori Checklist</h3>
+    <p>Reusable baseline field checklist. Use this before running find-specific AI analysis.</p>
+</a>
+
 {% if enabled %}
 <div class="ai-feature-list">
     {% for agent in enabled %}
