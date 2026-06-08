@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Settings — Emne{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Settings</h1>
+    <a href="/finds" class="btn">← Finds</a>
+</div>
+
+<form method="post" action="/settings" class="settings-form">
+    <div class="form-group">
+        <label for="region">Region</label>
+        <input type="text" id="region" name="region" value="{{ settings.region }}"
+               placeholder="Rogaland, Norway" autocomplete="off">
+        <p class="field-hint">Used to give the AI assistant local context. Update it when you travel.</p>
+    </div>
+
+    <fieldset class="settings-group">
+        <legend>AI assistant</legend>
+
+        <div class="settings-status {{ 'ok' if openai_configured else 'warn' }}">
+            {% if openai_configured %}
+            ✓ OpenAI API key is configured.
+            {% else %}
+            ⚠ OpenAI API key is not set. Set the <code>EMNE_OPENAI_API_KEY</code> secret to enable AI features.
+            {% endif %}
+        </div>
+
+        <label class="toggle-row">
+            <span class="toggle-text">
+                <span class="toggle-title">Species identification</span>
+                <span class="toggle-desc">Suggest a species from a find's photos.</span>
+            </span>
+            <input type="checkbox" name="ai_species_id" value="true" {{ 'checked' if settings.ai_species_id }}>
+            <span class="toggle-switch"></span>
+        </label>
+
+        <label class="toggle-row">
+            <span class="toggle-text">
+                <span class="toggle-title">Review checklist</span>
+                <span class="toggle-desc">Generate a collecting/review checklist for a find.</span>
+            </span>
+            <input type="checkbox" name="ai_review_checklist" value="true" {{ 'checked' if settings.ai_review_checklist }}>
+            <span class="toggle-switch"></span>
+        </label>
+
+        <label class="toggle-row">
+            <span class="toggle-text">
+                <span class="toggle-title">Collection timing</span>
+                <span class="toggle-desc">Advise on the best season/time to collect.</span>
+            </span>
+            <input type="checkbox" name="ai_collect_timing" value="true" {{ 'checked' if settings.ai_collect_timing }}>
+            <span class="toggle-switch"></span>
+        </label>
+
+        <label class="toggle-row">
+            <span class="toggle-text">
+                <span class="toggle-title">Suggest metadata</span>
+                <span class="toggle-desc">Propose title, category and notes from photos.</span>
+            </span>
+            <input type="checkbox" name="ai_suggest_metadata" value="true" {{ 'checked' if settings.ai_suggest_metadata }}>
+            <span class="toggle-switch"></span>
+        </label>
+    </fieldset>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save settings</button>
+    </div>
+</form>
+
+<div class="settings-footer">
+    <a href="/logout" class="btn btn-danger">⏻ Log out</a>
+</div>
+{% endblock %}

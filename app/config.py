@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "emne-photos"
     s3_region: str = "auto"
 
+    # OpenAI (presence enables AI features; never stored in the DB)
+    openai_api_key: str = ""
+
     model_config = {"env_prefix": "EMNE_"}
 
 

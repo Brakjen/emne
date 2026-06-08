@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from geoalchemy2 import Geometry
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, String, Text, Uuid
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -115,3 +115,21 @@ class Photo(Base):
 
     find: Mapped["Find"] = relationship(back_populates="photos", foreign_keys="Photo.find_id")
     visit: Mapped["Visit | None"] = relationship(back_populates="photos")
+
+
+class AppSettings(Base):
+    """Single-row application settings for this single-user app."""
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    region: Mapped[str] = mapped_column(String(255), default="Rogaland, Norway")
+    ai_species_id: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_review_checklist: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_collect_timing: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_suggest_metadata: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
