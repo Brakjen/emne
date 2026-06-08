@@ -1,4 +1,4 @@
-const CACHE_NAME = 'emne-v12';
+const CACHE_NAME = 'emne-v13';
 const SHELL_ASSETS = [
     '/static/css/style.css',
     'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',

@@ -29,6 +29,12 @@ ARTICLES = [
         "description": "Post-collection care: potting, watering, protection and recovery signs.",
         "icon": "🌱",
     },
+    {
+        "slug": "norwegian-soil-products",
+        "title": "Norwegian Soil Products",
+        "description": "Local substrates, LECA, pumice, and bark substitutes available in Norway.",
+        "icon": "🇳🇴",
+    },
 ]
 
 GUIDE_DIR = Path(__file__).parent.parent / "guide"
