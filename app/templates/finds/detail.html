@@ -175,6 +175,8 @@
 
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 <script src="/static/js/capture.js?v={{ version }}"></script>
 <script>
     const lat = {{ lat }};
@@ -323,7 +325,9 @@
                 if (!response.ok) {
                     throw new Error(payload.error || 'Checklist generation failed.');
                 }
-                result.textContent = payload.content || 'No checklist was returned.';
+                const markdown = payload.content || 'No checklist was returned.';
+                const html = marked.parse(markdown, { breaks: true });
+                result.innerHTML = DOMPurify.sanitize(html);
             } catch (err) {
                 result.textContent = err.message || 'Checklist generation failed.';
             } finally {
