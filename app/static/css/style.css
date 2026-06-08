@@ -725,7 +725,7 @@ body.cam-open { overflow: hidden; }
     writing-mode: vertical-lr;
     direction: rtl;
     width: 24px;
-    height: 150px;
+    height: min(60vh, 340px);
     accent-color: #fff;
 }
 .cam-zoom-label {
