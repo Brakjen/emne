@@ -269,6 +269,81 @@ async def ai_review_checklist(find_id: uuid.UUID, db: AsyncSession = Depends(get
     return JSONResponse({"content": content.strip()})
 
 
+@router.post("/{find_id}/ai/species-id")
+async def ai_species_id(find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    app_settings = await get_app_settings(db)
+
+    if not ai_service.is_configured():
+        return JSONResponse(
+            {"error": "AI is not configured. Set EMNE_OPENAI_API_KEY first."},
+            status_code=503,
+        )
+
+    if not app_settings.ai_species_id:
+        return JSONResponse(
+            {"error": "Species identification is disabled in Settings."},
+            status_code=403,
+        )
+
+    stmt = (
+        select(Find)
+        .options(selectinload(Find.photos), selectinload(Find.species))
+        .where(Find.id == find_id)
+    )
+    result = await db.execute(stmt)
+    find = result.scalar_one_or_none()
+    if not find:
+        return JSONResponse({"error": "Find not found"}, status_code=404)
+
+    if not find.photos:
+        return JSONResponse(
+            {"error": "No photos available. Add photos first for species identification."},
+            status_code=400,
+        )
+
+    user_text = (
+        f"Identify the species in these photos.\n"
+        f"Title: {find.title}\n"
+        f"Category: {find.category}\n"
+        f"Notes: {find.description or '(none)'}"
+    )
+
+    try:
+        content = await ai_service.complete(
+            "species_id",
+            user_text,
+            region=app_settings.region,
+            image_urls=ai_service.find_image_urls(find, use_full=False, limit=4),
+        )
+    except ai_service.AINotConfigured:
+        return JSONResponse(
+            {"error": "AI is not configured. Set EMNE_OPENAI_API_KEY first."},
+            status_code=503,
+        )
+
+    return JSONResponse({"content": content.strip()})
+
+
+@router.patch("/{find_id}/species")
+async def update_find_species(
+    find_id: uuid.UUID,
+    species_name: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update a find's species (used by AI species ID 'Apply' button)."""
+    stmt = select(Find).where(Find.id == find_id)
+    result = await db.execute(stmt)
+    find = result.scalar_one_or_none()
+    if not find:
+        return JSONResponse({"error": "Find not found"}, status_code=404)
+
+    species = await get_or_create_species(db, species_name)
+    find.species_id = species.id
+    await db.commit()
+
+    return JSONResponse({"success": True, "species": species.name})
+
+
 @router.get("/{find_id}/edit", response_class=HTMLResponse)
 async def edit_find_form(request: Request, find_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     stmt = select(Find).options(selectinload(Find.species)).where(Find.id == find_id)

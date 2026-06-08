@@ -1026,6 +1026,29 @@ body.cam-open { overflow: hidden; }
 .ai-result br + br {
     display: none;
 }
+.ai-apply {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    background: #f7f5ef;
+    border-radius: var(--radius);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.88rem;
+}
+.ai-apply label { display: flex; align-items: center; gap: 0.4rem; }
+.ai-apply input[type="text"] {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 0.88rem;
+    width: 14rem;
+}
+.ai-apply #ai-species-apply-status {
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+}
 
 /* Field Guide */
 .guide-intro {
