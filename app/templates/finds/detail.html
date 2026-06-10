@@ -77,7 +77,7 @@
             <div id="ai-species-id-apply" class="ai-apply" style="display:none">
                 <label>Apply species:
                     <div class="autocomplete-wrapper">
-                        <input type="search" id="ai-species-input" placeholder="e.g. Pinus sylvestris" autocomplete="off">
+                        <input type="text" id="ai-species-input" placeholder="e.g. Pinus sylvestris">
                         <ul id="species-dropdown" class="autocomplete-dropdown"></ul>
                     </div>
                 </label>
@@ -418,7 +418,7 @@
         });
     }
 
-    // --- Species autocomplete (custom dropdown for cross-browser support) ---
+    // --- Species autocomplete ---
     const speciesInput = document.getElementById('ai-species-input');
     const speciesDropdown = document.getElementById('species-dropdown');
     if (speciesInput && speciesDropdown) {

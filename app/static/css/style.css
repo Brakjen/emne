@@ -1038,14 +1038,12 @@ body.cam-open { overflow: hidden; }
     font-size: 0.88rem;
 }
 .ai-apply label { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-.ai-apply input[type="text"],
-.ai-apply input[type="search"] {
+.ai-apply input[type="text"] {
     padding: 0.3rem 0.5rem;
     border: 1px solid var(--color-border);
     border-radius: 4px;
     font-size: 0.88rem;
     width: 14rem;
-    -webkit-appearance: none;
 }
 .ai-apply #ai-species-apply-status {
     color: var(--color-text-muted);
