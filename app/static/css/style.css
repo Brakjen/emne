@@ -1037,7 +1037,7 @@ body.cam-open { overflow: hidden; }
     gap: 0.5rem;
     font-size: 0.88rem;
 }
-.ai-apply label { display: flex; align-items: center; gap: 0.4rem; }
+.ai-apply label { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .ai-apply input[type="text"] {
     padding: 0.3rem 0.5rem;
     border: 1px solid var(--color-border);
@@ -1048,6 +1048,35 @@ body.cam-open { overflow: hidden; }
 .ai-apply #ai-species-apply-status {
     color: var(--color-text-muted);
     font-size: 0.82rem;
+}
+.autocomplete-wrapper {
+    position: relative;
+    display: inline-block;
+}
+.autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 100;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.autocomplete-dropdown li {
+    padding: 0.4rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+}
+.autocomplete-dropdown li:hover {
+    background: var(--color-bg);
 }
 
 /* Field Guide */

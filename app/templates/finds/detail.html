@@ -75,8 +75,12 @@
             </ul>
             <div id="ai-species-id-result" class="ai-result" style="display:none"></div>
             <div id="ai-species-id-apply" class="ai-apply" style="display:none">
-                <label>Apply species: <input type="text" id="ai-species-input" list="species-options" placeholder="e.g. Pinus sylvestris" autocomplete="off"></label>
-                <datalist id="species-options"></datalist>
+                <label>Apply species:
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="ai-species-input" placeholder="e.g. Pinus sylvestris" autocomplete="off">
+                        <ul id="species-dropdown" class="autocomplete-dropdown"></ul>
+                    </div>
+                </label>
                 <button type="button" class="btn btn-xs" id="ai-species-apply-btn">Save</button>
                 <span id="ai-species-apply-status"></span>
             </div>
@@ -414,25 +418,59 @@
         });
     }
 
-    // --- Populate species autocomplete ---
+    // --- Species autocomplete (custom dropdown for cross-browser support) ---
     const speciesInput = document.getElementById('ai-species-input');
-    const speciesDatalist = document.getElementById('species-options');
-    if (speciesInput && speciesDatalist) {
+    const speciesDropdown = document.getElementById('species-dropdown');
+    if (speciesInput && speciesDropdown) {
+        let allSpecies = [];
         let speciesLoaded = false;
-        speciesInput.addEventListener('focus', async function() {
+
+        async function loadSpecies() {
             if (speciesLoaded) return;
             speciesLoaded = true;
             try {
                 const response = await fetch('/api/species');
-                const species = await response.json();
-                species.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.name;
-                    speciesDatalist.appendChild(opt);
-                });
+                allSpecies = await response.json();
             } catch (e) {
                 console.error('Failed to load species:', e);
             }
+        }
+
+        function showDropdown(filter = '') {
+            const q = filter.toLowerCase();
+            const matches = q 
+                ? allSpecies.filter(s => s.name.toLowerCase().includes(q))
+                : allSpecies;
+            
+            speciesDropdown.innerHTML = '';
+            if (matches.length === 0) {
+                speciesDropdown.style.display = 'none';
+                return;
+            }
+            matches.slice(0, 10).forEach(s => {
+                const li = document.createElement('li');
+                li.textContent = s.name;
+                li.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    speciesInput.value = s.name;
+                    speciesDropdown.style.display = 'none';
+                });
+                speciesDropdown.appendChild(li);
+            });
+            speciesDropdown.style.display = '';
+        }
+
+        speciesInput.addEventListener('focus', async () => {
+            await loadSpecies();
+            showDropdown(speciesInput.value);
+        });
+
+        speciesInput.addEventListener('input', () => {
+            showDropdown(speciesInput.value);
+        });
+
+        speciesInput.addEventListener('blur', () => {
+            setTimeout(() => { speciesDropdown.style.display = 'none'; }, 150);
         });
     }
 
